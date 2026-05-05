@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+
+# Build
+dist/
+build/
+*.tsbuildinfo
+
+# Env
+.env
+.env.local
+apps/*/.env
+
+# Logs / OS
+*.log
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+*.swp
+*.swo
+
+# Java / legacy
+target/
+*.class
+
+# Vite
+apps/ui/.vite/
+
+# Data (local dev)
+data/
+
+# pnpm
+.pnpm-debug.log*
