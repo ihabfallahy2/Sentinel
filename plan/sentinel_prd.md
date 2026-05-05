@@ -1,6 +1,6 @@
 # Sentinel — Product Requirements Document
 
-> **Estado en repo (2026-05):** monorepo pnpm, API Fastify (proyectos con clone Git, deploy compose, SSE de logs), UI con React Flow y widgets `deploy_card` / `log_stream` para el primer proyecto. Siguiente hito natural: pulir multi-proyecto en canvas y validar con Dynamoss. Detalle: `README.md` y `CURSOR.md`.
+> **Estado en repo (2026-05):** implementación MVP del PRD: API con endpoints de despliegue, Docker, env, scripts, workflows SSE, sistema y GitHub; UI con pizarra global, canvas por proyecto, todos los tipos de widget del documento, persistencia/export del canvas y stack Docker con nginx → `/api`. Siguiente paso operativo: desplegar en el servidor homelab y validar con proyectos reales (p. ej. Dynamoss). Detalle: `README.md` y `CURSOR.md`.
 
 ## 1. Visión del producto
 

@@ -3,7 +3,10 @@ import Fastify from 'fastify'
 import { join } from 'node:path'
 import { readDb } from './db/store'
 import { requireApiKey } from './middleware/auth'
+import { registerGithubRoutes } from './routes/github'
 import { registerProjectsRoutes } from './routes/projects'
+import { registerSystemRoutes } from './routes/system'
+import { registerWidgetRoutes } from './routes/widgets'
 
 const port = Number(process.env.SENTINEL_PORT ?? '3500')
 const dataDir = process.env.SENTINEL_DATA_DIR ?? './data'
@@ -23,6 +26,9 @@ async function main(): Promise<void> {
   await app.register(
     async (api) => {
       api.addHook('preHandler', auth)
+      await registerSystemRoutes(api)
+      await registerGithubRoutes(api)
+      await registerWidgetRoutes(api, dataDir)
       await registerProjectsRoutes(api, dataDir, projectsDir)
     },
     { prefix: '/api' },

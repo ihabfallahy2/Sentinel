@@ -10,9 +10,11 @@
   },
   "dependencies": {
     "@fastify/cors": "^10.0.1",
+    "@octokit/rest": "^22.0.1",
     "@sentinel/shared-types": "workspace:*",
     "fastify": "^5.2.0",
     "simple-git": "^3.36.0",
+    "systeminformation": "^5.31.5",
     "zod": "^3.23.8"
   },
   "devDependencies": {

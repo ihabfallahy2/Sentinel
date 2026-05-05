@@ -7,12 +7,12 @@ Este archivo le indica a Cursor cómo está estructurado el proyecto y cómo deb
 ## Estado actual del repositorio (implementación)
 
 - Monorepo **pnpm** con `apps/ui`, `apps/api`, `packages/shared-types` (ver `README.md`).
-- API: **Fastify 5** + CORS, `GET /health`, CRUD mínimo de proyectos (`GET/POST /api/projects`, `GET/DELETE /api/projects/:id`), `POST .../deploy`, SSE `.../logs/stream`, autenticación por `x-api-key` (o query `apiKey` para EventSource).
-- **GitService** (`simple-git`): clone shallow en `SENTINEL_PROJECTS_DIR/<uuid>`.
-- **DockerService**: `docker compose up -d --build` y `docker compose logs -f` (requiere Docker/Compose en el servidor).
-- Persistencia: fichero JSON en `SENTINEL_DATA_DIR` (`apps/api/src/db/store.ts`); mismo objetivo que `lowdb` en la spec.
-- UI: **Vite 5** + React 18 + **React Flow** + Tailwind + Zustand; formulario “Añadir proyecto”; nodos `deploy_card` y `log_stream`; hook `useLogStream` (SSE).
-- Pendiente respecto al plan en `plan/`: React Query, shadcn/ui, más widgets, canvas multi-proyecto completo, caso Dynamoss end-to-end, etc.
+- API **Fastify 5**: rutas del PRD (proyectos, deployments, rollback, docker, env, scripts, workflows SSE, system, GitHub, widgets, canvas persistido). Auth `x-api-key` / `apiKey` (SSE).
+- Servicios: **GitService** (clone depth 40, pull, checkout), **DockerService** (compose), **EnvService**, **ScriptService** (bash/python/node), **SystemService** (systeminformation + `docker ps` JSON).
+- Persistencia JSON (`store.ts`): proyectos, deployments, layouts de canvas.
+- UI: **Vite + React 18 + React Flow + Tailwind**, **React Router** (`/` global, `/p/:id` proyecto), **TanStack Query**, **Sonner**. Nodos widget en `src/canvas/nodes/` + plantilla por defecto en `buildDefaultNodes.ts`. Auto-guardado de canvas y export/import JSON.
+- Docker UI: nginx proxifica `/api` al contenedor API (mismo origen; `VITE_API_URL` vacío en build por defecto).
+- **No** incluido a propósito (opcional más adelante): shadcn/ui, Recharts, node-pty, `dockerode`, notificaciones push complejas; validar **Dynamoss** en tu servidor es el siguiente paso operativo, no de código base.
 
 ---
 
@@ -48,10 +48,9 @@ sentinel/
 
 - React 18 + Vite 5 + TypeScript strict
 - `@xyflow/react` — canvas con dot grid, nodos arrastrables, zoom/pan
-- `zustand` — estado global del canvas y proyectos
-- `@tanstack/react-query` — fetching, caché y polling *(pendiente de añadir)*
-- `tailwindcss` + `shadcn/ui` — sistema de diseño oscuro *(shadcn pendiente)*
-- `recharts` — gráficas en metric cards *(pendiente)*
+- `@tanstack/react-query` — fetching, caché y polling
+- `tailwindcss` — estilos (sin shadcn en este repo)
+- `sonner` — toasts
 
 ### Reglas UI
 
@@ -59,18 +58,17 @@ sentinel/
 - Los widgets son nodos de React Flow en `src/canvas/nodes/`
 - Un archivo por tipo de widget
 - Los hooks de datos viven en `src/hooks/` — los componentes los consumen, no los crean
-- Estado del canvas en `src/store/canvasStore.ts` (Zustand)
-- Estado de proyectos en `src/store/projectStore.ts` (Zustand) *(pendiente)*
+- Canvas: estado con `useNodesState` / `useEdgesState` dentro de `ReactFlowProvider` (`pages/ProjectBoard.tsx`)
 
 ---
 
 ## Stack API (`apps/api`)
 
 - Node.js 20 LTS + **Fastify 5** + TypeScript strict
-- `simple-git` — operaciones Git (clone, pull, checkout) *(pendiente)*
-- `dockerode` — Docker Engine API *(pendiente)*
-- `node-pty` — ejecución de scripts con output en streaming real *(pendiente)*
-- `@octokit/rest` — GitHub API *(pendiente)*
+- `simple-git` — clone, pull, checkout
+- `@octokit/rest` — listado de repos (`GITHUB_TOKEN`)
+- Scripts: `child_process` (bash / python3 / node) en lugar de `node-pty`
+- Docker: CLI `docker compose` / `docker ps` (no `dockerode` en este repo)
 - Persistencia JSON en disco (`store.ts`; equivalente a `lowdb` en la spec)
 - `zod` — validación de todos los inputs *(en rutas nuevas)*
 
@@ -160,7 +158,7 @@ PUT    /api/projects/:id/canvas
 | SSE (`EventSource`) | Logs en vivo, output de scripts, eventos de workflow |
 | Polling (React Query) | Estado de widgets — configurable, default 5s |
 
-Hook de SSE disponible en `src/hooks/useSSE.ts` *(pendiente)*.
+Streams: logs compose y scripts vía SSE; workflows SSE desde `POST .../workflows/run`. Hook de logs: `src/hooks/useLogStream.ts`.
 
 ---
 
@@ -187,38 +185,34 @@ VITE_API_KEY=cambia_esto
 
 ## Fases de desarrollo (orden recomendado)
 
+Resumen: **fases 1–4 cubiertas en MVP** salvo matices abajo. La validación en producción (p. ej. Dynamoss) es el siguiente paso en tu servidor.
+
 ### Fase 1 — MVP funcional
 
-1. Monorepo base con pnpm workspaces + shared-types — **hecho (base)**
-2. Sentinel API: estructura Fastify + auth middleware + store JSON — **hecho (base)**
-3. `GitService` — clone y pull — **clone hecho**; pull/refresh pendiente
-4. `DockerService` — compose up/down + stream de logs via SSE — **hecho (up + logs SSE)**
-5. Sentinel UI: canvas base con React Flow + dot grid background — **hecho (base)**
-6. Widget `deploy_card` + widget `log_stream` — **hecho (MVP primer proyecto)**
-7. Deploy de Dynamoss como caso de prueba real
+1. Monorepo + shared-types — **hecho**
+2. API Fastify + auth + JSON store — **hecho**
+3. `GitService` — **hecho** (clone, pull en deploy, checkout rollback)
+4. `DockerService` — **hecho** (up/start/stop/restart/rebuild, logs SSE)
+5. UI React Flow — **hecho**
+6. Widgets `deploy_card`, `log_stream` — **hecho**
+7. Caso Dynamoss — **pendiente en tu homelab** (probar contra repo real)
 
 ### Fase 2 — Operaciones
 
-8. Widgets `action_button`, `docker_control`, `system_stats`
-9. `ScriptService` — ejecución de scripts con node-pty + SSE
-10. Widget `script_runner`
-11. Historial de deployments y rollback UI
-12. `EnvService` — lectura, escritura y diff de .env
-13. Widget `env_editor`
+8–13. Widgets operativos, scripts (`child_process`, SSE), deployments + rollback en UI, env + `env_editor` — **hecho** (sin `node-pty`)
 
 ### Fase 3 — Workflows y métricas
 
-14. Motor de workflows en Sentinel API (SSE con eventos tipados por nodo)
-15. Widget `workflow` con nodos visuales y estado individual
-16. Conditional branching (si nodo falla → ejecutar compensación)
-17. Widgets `metric_card`, `job_monitor`, `rest_explorer`
+14–15. Workflows SSE con eventos por paso — **hecho**
+16. Ramificación condicional / compensación automática — **no** (el motor para al fallar un paso; ampliable)
+17. `metric_card`, `job_monitor`, `rest_explorer` — **hecho** (métricas vía stats del host en MVP)
 
 ### Fase 4 — Multi-proyecto y pulido
 
-18. Pizarra global con todos los proyectos
-19. GitHub integration — listar repos, seleccionar rama desde UI
-20. Notificaciones de estado (toast + indicadores en pizarra global)
-21. Export/import de canvas layouts
+18. Pizarra global — **hecho** (`/`)
+19. GitHub list repos — **hecho** con token
+20. Toasts + indicadores de estado — **hecho** (Sonner + dots)
+21. Export/import canvas — **hecho**
 
 ---
 
@@ -227,9 +221,9 @@ VITE_API_KEY=cambia_esto
 - TypeScript `strict: true` en todo el proyecto
 - `zod` para validar inputs en API — nunca confiar en datos sin validar
 - Nombres: `PascalCase` para componentes React, `camelCase` para el resto
-- Los widgets no hacen `fetch` directo — usan hooks de `src/hooks/`
+- Los widgets no hacen `fetch` directo — usan TanStack Query / mutaciones vía `sentinelClient.ts`
 - Toda llamada a la API pasa por `sentinelClient.ts`
-- Los services de la API son clases con métodos async — las rutas solo orquestan
+- La lógica vive en `apps/api/src/services/` — las rutas validan (zod) y delegan
 - Sin base de datos externa — JSON local es suficiente para este caso de uso
 
 ---

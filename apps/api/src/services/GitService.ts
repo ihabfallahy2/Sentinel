@@ -13,7 +13,38 @@ export async function cloneGithubRepo(options: {
     '--branch',
     options.branch,
     '--depth',
-    '1',
+    '40',
     '--single-branch',
   ])
+}
+
+export async function getHeadSummary(cwd: string): Promise<{ sha: string; message: string }> {
+  const git = simpleGit({ baseDir: cwd })
+  const log = await git.log({ maxCount: 1 })
+  const latest = log.latest
+  if (!latest) {
+    return { sha: 'unknown', message: '' }
+  }
+  return { sha: latest.hash, message: latest.message }
+}
+
+export async function pullProject(cwd: string, branch: string): Promise<void> {
+  const git = simpleGit({ baseDir: cwd })
+  try {
+    await git.fetch('origin', branch, ['--depth', '40'])
+  } catch {
+    await git.fetch('origin', branch)
+  }
+  await git.checkout(branch)
+  await git.pull('origin', branch)
+}
+
+export async function checkoutCommit(cwd: string, sha: string): Promise<void> {
+  const git = simpleGit({ baseDir: cwd })
+  try {
+    await git.fetch('origin', ['--depth', '40'])
+  } catch {
+    await git.fetch('origin')
+  }
+  await git.checkout(sha)
 }
