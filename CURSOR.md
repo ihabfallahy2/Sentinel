@@ -7,10 +7,12 @@ Este archivo le indica a Cursor cómo está estructurado el proyecto y cómo deb
 ## Estado actual del repositorio (implementación)
 
 - Monorepo **pnpm** con `apps/ui`, `apps/api`, `packages/shared-types` (ver `README.md`).
-- API: **Fastify 5** + CORS, `GET /health`, `GET /api/projects`, autenticación por `x-api-key`.
+- API: **Fastify 5** + CORS, `GET /health`, CRUD mínimo de proyectos (`GET/POST /api/projects`, `GET/DELETE /api/projects/:id`), `POST .../deploy`, SSE `.../logs/stream`, autenticación por `x-api-key` (o query `apiKey` para EventSource).
+- **GitService** (`simple-git`): clone shallow en `SENTINEL_PROJECTS_DIR/<uuid>`.
+- **DockerService**: `docker compose up -d --build` y `docker compose logs -f` (requiere Docker/Compose en el servidor).
 - Persistencia: fichero JSON en `SENTINEL_DATA_DIR` (`apps/api/src/db/store.ts`); mismo objetivo que `lowdb` en la spec.
-- UI: **Vite 5** + React 18 + **React Flow** (`@xyflow/react`) + Tailwind + Zustand; proxy `/api` en desarrollo.
-- Pendiente respecto al plan en `plan/`: servicios Git/Docker, SSE, widgets concretos, React Query, shadcn/ui, etc.
+- UI: **Vite 5** + React 18 + **React Flow** + Tailwind + Zustand; formulario “Añadir proyecto”; nodos `deploy_card` y `log_stream`; hook `useLogStream` (SSE).
+- Pendiente respecto al plan en `plan/`: React Query, shadcn/ui, más widgets, canvas multi-proyecto completo, caso Dynamoss end-to-end, etc.
 
 ---
 
@@ -189,10 +191,10 @@ VITE_API_KEY=cambia_esto
 
 1. Monorepo base con pnpm workspaces + shared-types — **hecho (base)**
 2. Sentinel API: estructura Fastify + auth middleware + store JSON — **hecho (base)**
-3. `GitService` — clone y pull
-4. `DockerService` — compose up/down + stream de logs via SSE
+3. `GitService` — clone y pull — **clone hecho**; pull/refresh pendiente
+4. `DockerService` — compose up/down + stream de logs via SSE — **hecho (up + logs SSE)**
 5. Sentinel UI: canvas base con React Flow + dot grid background — **hecho (base)**
-6. Widget `deploy_card` + widget `log_stream`
+6. Widget `deploy_card` + widget `log_stream` — **hecho (MVP primer proyecto)**
 7. Deploy de Dynamoss como caso de prueba real
 
 ### Fase 2 — Operaciones

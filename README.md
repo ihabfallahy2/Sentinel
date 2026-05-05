@@ -14,7 +14,11 @@ Diagramas de arquitectura: `plan/sentinel_diagrams.html`.
 | API **Fastify 5**: `GET /health`, `GET /api/projects`, API key `x-api-key` | Listo (MVP) |
 | Persistencia JSON en `SENTINEL_DATA_DIR` | Listo (MVP) |
 | UI **Vite + React + React Flow + Tailwind + Zustand**, proxy `/api` en dev | Listo (MVP) |
-| Git clone, Docker, SSE, widgets (`deploy_card`, `log_stream`, …) | Pendiente (ver `CURSOR.md`) |
+| `POST /api/projects` (clone Git), `GET/DELETE /api/projects/:id` | Listo (MVP) |
+| `POST /api/projects/:id/deploy` (`docker compose up -d --build`) | Listo (requiere Docker en el host) |
+| SSE `GET /api/projects/:id/logs/stream` (`docker compose logs -f`) | Listo |
+| Widgets canvas `deploy_card` y `log_stream` | Listo (primer proyecto) |
+| Caso Dynamoss, más widgets, GitHub privado avanzado | Pendiente (ver `CURSOR.md`) |
 
 Guía de desarrollo para el asistente y convenciones: **`CURSOR.md`**.
 
@@ -49,7 +53,7 @@ $env:SENTINEL_API_KEY="dev"; $env:SENTINEL_DATA_DIR="./data"; pnpm dev:api
 $env:VITE_API_KEY="dev"; pnpm dev:ui
 ```
 
-Abre la UI (por defecto `http://localhost:5173`). La página comprueba `GET /api/projects` y muestra el canvas de ejemplo.
+Abre la UI (por defecto `http://localhost:5173`). Puedes **añadir un repo** (necesitas `git` en el PATH). **Deploy** y **logs en vivo** llaman a `docker compose` en el directorio clonado: hace falta **Docker Engine + plugin Compose** en la máquina donde corre la API (en Windows, suele funcionar si `docker` está en el PATH).
 
 ---
 

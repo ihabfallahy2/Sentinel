@@ -1,6 +1,6 @@
 # Sentinel — Product Requirements Document
 
-> **Estado en repo (2026-05):** implementación inicial en la rama `feature/sentinel-monorepo`: monorepo pnpm, API Fastify con API key y lista de proyectos (JSON), UI con React Flow. El resto de flujos y widgets sigue planificado en las secciones siguientes. Detalle: `README.md` y `CURSOR.md`.
+> **Estado en repo (2026-05):** monorepo pnpm, API Fastify (proyectos con clone Git, deploy compose, SSE de logs), UI con React Flow y widgets `deploy_card` / `log_stream` para el primer proyecto. Siguiente hito natural: pulir multi-proyecto en canvas y validar con Dynamoss. Detalle: `README.md` y `CURSOR.md`.
 
 ## 1. Visión del producto
 

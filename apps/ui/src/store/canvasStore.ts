@@ -8,19 +8,19 @@ export type CanvasState = {
   onNodesChange: OnNodesChange
   onEdgesChange: OnEdgesChange
   onConnect: (params: Parameters<typeof addEdge>[0]) => void
+  replaceNodes: (nodes: Node[]) => void
+  replaceEdges: (edges: Edge[]) => void
 }
 
-const initialNodes: Node[] = [
-  {
-    id: 'welcome',
-    type: 'default',
-    position: { x: 0, y: 0 },
-    data: { label: 'Sentinel canvas (MVP)' },
-  },
-]
+const welcomeNode: Node = {
+  id: 'welcome',
+  type: 'default',
+  position: { x: 40, y: 40 },
+  data: { label: 'Añade un repositorio Git para ver widgets de deploy y logs.' },
+}
 
 export const useCanvasStore = create<CanvasState>((set, get) => ({
-  nodes: initialNodes,
+  nodes: [welcomeNode],
   edges: [],
   onNodesChange: (changes) => {
     set({
@@ -36,5 +36,11 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     set({
       edges: addEdge(connection, get().edges),
     })
+  },
+  replaceNodes: (nodes) => {
+    set({ nodes })
+  },
+  replaceEdges: (edges) => {
+    set({ edges })
   },
 }))
