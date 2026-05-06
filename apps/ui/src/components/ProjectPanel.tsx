@@ -681,7 +681,6 @@ function maskValue(value: string): string {
   if (value.length <= 2) return '••'
   return `${value.slice(0, 1)}••••${value.slice(-1)}`
 }
-
 function extractEnvKeys(content?: string): string[] {
   if (!content) return []
   return content
