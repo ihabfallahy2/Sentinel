@@ -1,98 +1,90 @@
-# 🚀 Sentinel
+# Sentinel
 
-**Sentinel** es un proyecto de aprendizaje en **Java + Spring Boot** cuyo objetivo es servir como laboratorio para practicar desde lo básico hasta conceptos avanzados de desarrollo backend.
-
-La idea nace de crear un **sistema de monitoreo de repositorios públicos** (por ejemplo, en GitHub) que pueda crecer por fases, incorporando múltiples tecnologías y buenas prácticas.
+**Sentinel** es una plataforma **self-hosted** para desplegar y operar proyectos en un **homelab** (Linux + Docker), con una interfaz tipo **canvas** (React Flow). El alcance del producto está en `plan/sentinel_prd.md` y la especificación técnica en `plan/sentinel_tech.md`. Diagramas: `plan/sentinel_diagrams.html`.
 
 ---
 
-## 🎯 Objetivo General
+## Funcionalidad (alineada al plan)
 
-El propósito de Sentinel es:
+| Área | Estado |
+|------|--------|
+| Monorepo **pnpm** (`apps/ui`, `apps/api`, `packages/shared-types`) | Listo |
+| API **Fastify 5**, API key (`x-api-key` o `apiKey` en query para SSE) | Listo |
+| Proyectos: clone Git (`simple-git`, depth 40), CRUD, `pull` opcional en deploy | Listo |
+| Deploy / rollback, historial **deployments** en JSON | Listo |
+| Docker Compose: up, start/stop/restart/rebuild, logs SSE, `docker ps` estado | Listo |
+| `.env` lectura/escritura y diff con `.env.example` | Listo |
+| Scripts `.sh/.py/.js` (sync + SSE stream) | Listo |
+| **Workflows** secuenciales (REST / script / docker) vía SSE | Listo |
+| Sistema: CPU/RAM/disco (`systeminformation`), listado contenedores `docker ps` | Listo |
+| GitHub: `GET /api/github/repos` con `GITHUB_TOKEN` | Listo |
+| `POST /api/widgets/execute` (REST, docker, script desde la API) | Listo |
+| Canvas persistido por proyecto + export/import JSON | Listo |
+| UI: **React Router**, **TanStack Query**, **Sonner**, nodos para todos los widgets del PRD | Listo (MVP) |
+| **Docker Compose stack**: UI nginx proxifica `/api` → API (mismo origen) | Listo |
+| shadcn/ui, Recharts, node-pty, plugin widgets “terceros” | No incluidos (opcional / futuro) |
 
-- Mantener un **catálogo de repositorios** a vigilar.
-- Recolectar datos periódicamente usando **procesos batch**.
-- Procesar la información y generar **alertas**.
-- Distribuir estas alertas vía **mensajería** (Kafka, RabbitMQ, etc.).
-- Exponer una API REST y, eventualmente, una interfaz web para consultar el historial.
-- Integrar métricas, seguridad, despliegue y monitoreo.
-
-Este proyecto se desarrolla **por fases**, cada una introduciendo nuevas herramientas y conceptos.
-
----
-
-## 🗺 Roadmap de desarrollo
-
-### **Fase 1 – Fundamentos**
-- Spring Boot básico.
-- CRUD de repositorios vigilados.
-- Persistencia en H2 usando Spring Data JPA.
-- API REST documentada con OpenAPI (Swagger).
-
-### **Fase 2 – Consulta a GitHub**
-- Uso de `WebClient` o `RestTemplate`.
-- Integración con la API de GitHub para obtener información de los repositorios.
-- Manejo de errores y almacenamiento de resultados.
-
-### **Fase 3 – Procesos Batch**
-- Spring Batch + `@Scheduled` para ejecución periódica.
-- Lectura de la lista de repos, consulta a GitHub y almacenamiento histórico.
-
-### **Fase 4 – Mensajería**
-- Publicación de eventos en Kafka o RabbitMQ.
-- Consumidores que procesen y guarden alertas.
-
-### **Fase 5 – Seguridad**
-- Spring Security con JWT o OAuth2 (login con GitHub).
-- Roles y permisos.
-
-### **Fase 6 – Webhooks**
-- Recepción de eventos en tiempo real desde GitHub.
-- Procesamiento y notificación inmediata.
-
-### **Fase 7 – Observabilidad**
-- Spring Boot Actuator.
-- Métricas y health checks.
-- Logging estructurado.
-
-### **Fase 8 – Despliegue y CI/CD**
-- Dockerización.
-- Pipelines con GitHub Actions.
-- Despliegue en un entorno cloud (Render, Railway, Heroku, etc.).
+Guía para el asistente: **`CURSOR.md`**.
 
 ---
 
-## 🛠 Tecnologías y librerías clave
+## Requisitos
 
-- **Java 17**
-- **Spring Boot** (Web, Data JPA, Batch, Security)
-- **MapStruct** para mapeo de DTOs
-- **H2 / PostgreSQL**
-- **OpenAPI / Swagger**
-- **Kafka o RabbitMQ**
-- **Spring Boot Actuator** y **Micrometer**
+- Node.js 20+, pnpm 9 (`corepack enable`)
+- En el host de la API: **git**, **Docker** + **Compose v2**
+- Opcional: `GITHUB_TOKEN` para listar repos en la pizarra global
 
 ---
 
-## 📦 Estado actual
-
-Actualmente el proyecto está en la **Fase 1**, con:
-- API REST básica (`/api/repositories`)
-- Persistencia en memoria (H2)
-- Documentación con Swagger UI
-
-Puedes ejecutar el proyecto con:
+## Desarrollo local
 
 ```bash
-mvn spring-boot:run
+cp .env.example .env
 ```
 
-## Swagger UI:
+Misma clave en `SENTINEL_API_KEY` y `VITE_API_KEY`. Para la UI, `VITE_API_URL=http://localhost:3500` o vacío usando el proxy de Vite (`/api` → `3500`).
+
+```powershell
+$env:SENTINEL_API_KEY="dev"; $env:SENTINEL_DATA_DIR="./data"; $env:SENTINEL_PROJECTS_DIR="./projects"; pnpm dev:api
+$env:VITE_API_KEY="dev"; pnpm dev:ui
+```
+
+- **Global**: `http://localhost:5173/` — alta de proyectos, enlaces al canvas.
+- **Proyecto**: `http://localhost:5173/p/<uuid>` — canvas con widgets (se guarda solo en el JSON de datos).
+
+---
+
+## Docker en servidor
 
 ```bash
-http://localhost:8080/swagger-ui.html
+docker compose up --build
 ```
 
-## 🤝 Contribuir
+- API: **3500**
+- UI: **4000** (nginx; **`VITE_API_URL` vacío por defecto** para que el navegador llame a `/api` del mismo host).
 
-Este proyecto es principalmente para aprendizaje, pero se aceptan ideas y PRs que ayuden a cubrir las fases del roadmap.
+Variables importantes: `SENTINEL_API_KEY`, `SENTINEL_DATA_DIR`, `SENTINEL_PROJECTS_DIR`, volúmenes en `docker-compose.yml`, y opcionalmente `GITHUB_TOKEN` en el servicio API.
+
+---
+
+## Scripts
+
+| Comando | Descripción |
+|---------|-------------|
+| `pnpm dev:api` | API (tsx watch) |
+| `pnpm dev:ui` | UI (Vite) |
+| `pnpm build` | Compila tipos, API y UI |
+
+---
+
+## Documentación
+
+- `plan/sentinel_prd.md` — PRD  
+- `plan/sentinel_tech.md` — especificación  
+- `CURSOR.md` — convenciones y fases
+
+---
+
+## Contribuir
+
+Mantén la lógica en `apps/api/src/services/`, la UI hablando solo con `apps/ui/src/api/sentinelClient.ts`, y los contratos en `packages/shared-types`.

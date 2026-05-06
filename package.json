@@ -1,0 +1,11 @@
+{
+  "name": "sentinel",
+  "private": true,
+  "packageManager": "pnpm@9.15.0",
+  "scripts": {
+    "dev:api": "pnpm --filter @sentinel/api dev",
+    "dev:ui": "pnpm --filter @sentinel/ui dev",
+    "build": "pnpm -r run build",
+    "lint": "pnpm -r run lint --if-present"
+  }
+}
