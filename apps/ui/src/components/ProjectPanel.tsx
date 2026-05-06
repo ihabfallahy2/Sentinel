@@ -377,13 +377,14 @@ export function ProjectPanel({ project, open, activeTab, onChangeTab, onClose }:
   )
 }
 
-function computeMissingEnvKeys(exampleContent: string, envContent: string): string[] {
+function computeMissingEnvKeys(exampleContent?: string, envContent?: string): string[] {
   const exampleKeys = extractEnvKeys(exampleContent)
   const envKeys = new Set(extractEnvKeys(envContent))
   return exampleKeys.filter((key) => !envKeys.has(key))
 }
 
-function extractEnvKeys(content: string): string[] {
+function extractEnvKeys(content?: string): string[] {
+  if (!content) return []
   return content
     .split('\n')
     .map((line) => line.trim())

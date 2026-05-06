@@ -113,8 +113,9 @@ export async function registerBoardsRoutes(
     const projectId = randomUUID()
     const localPath = join(projectsDir, projectId)
 
+    let resolvedBranch = branch
     try {
-      await cloneGithubRepo({ url: githubUrl, branch, targetDir: localPath })
+      resolvedBranch = await cloneGithubRepo({ url: githubUrl, branch, targetDir: localPath })
     } catch (err) {
       await reply.code(400).send({
         error: 'Clone failed',
@@ -132,7 +133,7 @@ export async function registerBoardsRoutes(
       id: projectId,
       name: sanitizeDirName(displayName),
       githubUrl,
-      branch,
+      branch: resolvedBranch,
       status: 'offline',
       localPath,
       lastDeployedAt: null,
