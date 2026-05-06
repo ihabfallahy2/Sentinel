@@ -1,0 +1,30 @@
+name: Deploy to homelab
+
+on:
+  push:
+    branches:
+      - develop
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    timeout-minutes: 15
+
+    steps:
+      - name: Pull latest changes
+        run: |
+          cd /home/ihabfa/dev/Sentinel
+          git fetch origin develop
+          git reset --hard origin/develop
+
+      - name: Build and deploy
+        run: |
+          cd /home/ihabfa/dev/Sentinel
+          docker compose down
+          docker compose up -d --build
+
+      - name: Verify
+        run: |
+          sleep 10
+          cd /home/ihabfa/dev/Sentinel
+          docker compose ps
