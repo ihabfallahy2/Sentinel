@@ -8,7 +8,12 @@ import type {
   WorkflowStep,
 } from '@sentinel/shared-types'
 
-const API_BASE = import.meta.env.VITE_API_URL ?? ''
+const API_BASE = localStorage.getItem('sentinel_api_url')?.trim() || import.meta.env.VITE_API_URL || ''
+
+function getApiBase(): string {
+  const stored = localStorage.getItem('sentinel_api_url')?.trim()
+  return stored && stored.length > 0 ? stored : API_BASE
+}
 
 function getApiKey(): string | null {
   if (import.meta.env.VITE_API_KEY) {
@@ -36,7 +41,7 @@ function authHeaders(): HeadersInit {
 }
 
 export async function fetchProject(id: string): Promise<Project> {
-  const res = await fetch(`${API_BASE}/api/projects/${id}`, { headers: authHeaders() })
+  const res = await fetch(`${getApiBase()}/api/projects/${id}`, { headers: authHeaders() })
   if (!res.ok) {
     throw new Error(`project: ${res.status}`)
   }
@@ -44,7 +49,7 @@ export async function fetchProject(id: string): Promise<Project> {
 }
 
 export async function fetchProjects(): Promise<Project[]> {
-  const res = await fetch(`${API_BASE}/api/projects`, { headers: authHeaders() })
+  const res = await fetch(`${getApiBase()}/api/projects`, { headers: authHeaders() })
   if (!res.ok) {
     throw new Error(`projects: ${res.status}`)
   }
@@ -52,7 +57,7 @@ export async function fetchProjects(): Promise<Project[]> {
 }
 
 export async function fetchBoards(): Promise<BoardSummary[]> {
-  const res = await fetch(`${API_BASE}/api/boards`, { headers: authHeaders() })
+  const res = await fetch(`${getApiBase()}/api/boards`, { headers: authHeaders() })
   if (!res.ok) {
     throw new Error(`boards: ${res.status}`)
   }
@@ -60,7 +65,7 @@ export async function fetchBoards(): Promise<BoardSummary[]> {
 }
 
 export async function fetchBoard(id: string): Promise<BoardDetail> {
-  const res = await fetch(`${API_BASE}/api/boards/${id}`, { headers: authHeaders() })
+  const res = await fetch(`${getApiBase()}/api/boards/${id}`, { headers: authHeaders() })
   if (!res.ok) {
     throw new Error(`board: ${res.status}`)
   }
@@ -310,6 +315,19 @@ export async function fetchGithubRepos(): Promise<
   }
   const data: unknown = await res.json()
   return Array.isArray(data) ? data : []
+}
+
+export async function fetchGithubBranches(url: string): Promise<{
+  defaultBranch: string
+  branches: string[]
+}> {
+  const qs = new URLSearchParams({ url })
+  const res = await fetch(`${API_BASE}/api/github/branches?${qs.toString()}`, { headers: authHeaders() })
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string; message?: string }
+    throw new Error(err.message ?? err.error ?? `github branches: ${res.status}`)
+  }
+  return res.json() as Promise<{ defaultBranch: string; branches: string[] }>
 }
 
 export async function executeWidget(body: {

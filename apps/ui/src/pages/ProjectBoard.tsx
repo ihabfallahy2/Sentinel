@@ -21,6 +21,7 @@ import { toast } from 'sonner'
 import {
   fetchBoard,
   fetchBoardCanvas,
+  fetchGithubBranches,
   importBoardProject,
   removeBoardProject,
   saveBoardCanvas,
@@ -61,6 +62,20 @@ function ProjectCanvas({ boardId }: { boardId: string }) {
   const initialized = useRef(false)
   const skipNextSave = useRef(true)
   const importInputRef = useRef<HTMLInputElement>(null)
+
+  const { data: githubBranches, isFetching: fetchingBranches } = useQuery({
+    queryKey: ['github-branches', githubUrl],
+    queryFn: () => fetchGithubBranches(githubUrl.trim()),
+    enabled: showImportPanel && githubUrl.trim().length > 0,
+    retry: 0,
+  })
+
+  useEffect(() => {
+    if (!showImportPanel) return
+    if (githubBranches?.defaultBranch) {
+      setBranch(githubBranches.defaultBranch)
+    }
+  }, [githubBranches?.defaultBranch, showImportPanel])
 
   useEffect(() => {
     initialized.current = false
@@ -392,8 +407,8 @@ function ProjectCanvas({ boardId }: { boardId: string }) {
       }
       const yBase = 80 + Math.ceil(Math.max(filtered.length, 1) / 3) * 160
       const appended = missingProjects.map((project, index) => ({
-        id: `deploy-${project.id}`,
-        type: 'deploy_card',
+        id: `project-${project.id}`,
+        type: 'project_node',
         position: { x: 80 + (index % 3) * 360, y: yBase + Math.floor(index / 3) * 220 },
         data: { projectId: project.id },
       }))
@@ -523,11 +538,33 @@ function ProjectCanvas({ boardId }: { boardId: string }) {
               </label>
               <label className="text-xs text-zinc-400">
                 Rama
-                <input
-                  className="mt-1 w-full rounded border border-zinc-700 bg-zinc-950 px-2 py-1.5 text-sm"
-                  value={branch}
-                  onChange={(event) => setBranch(event.target.value)}
-                />
+                {githubBranches?.branches?.length ? (
+                  <select
+                    className="mt-1 w-full rounded border border-zinc-700 bg-zinc-950 px-2 py-1.5 text-sm"
+                    value={branch}
+                    onChange={(event) => setBranch(event.target.value)}
+                  >
+                    {githubBranches.branches.map((b) => (
+                      <option key={b} value={b}>
+                        {b}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    className="mt-1 w-full rounded border border-zinc-700 bg-zinc-950 px-2 py-1.5 text-sm"
+                    value={branch}
+                    onChange={(event) => setBranch(event.target.value)}
+                    placeholder={fetchingBranches ? 'Cargando ramas...' : 'main'}
+                  />
+                )}
+                <p className="mt-1 text-[11px] text-zinc-500">
+                  {githubBranches?.branches?.length
+                    ? `Detectadas ${githubBranches.branches.length} ramas (default: ${githubBranches.defaultBranch}).`
+                    : fetchingBranches
+                      ? 'Consultando ramas en GitHub…'
+                      : 'No se pudieron cargar ramas (o falta GITHUB_TOKEN). Puedes escribir la rama manualmente.'}
+                </p>
               </label>
               <label className="text-xs text-zinc-400">
                 Nombre opcional
@@ -559,18 +596,16 @@ export function ProjectBoard() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 p-4 text-zinc-100">
-      <ReactFlowProvider>
-        <ProjectCanvas boardId={boardId} />
-      </ReactFlowProvider>
-    </div>
+    <ReactFlowProvider>
+      <ProjectCanvas boardId={boardId} />
+    </ReactFlowProvider>
   )
 }
 
 function buildBoardDefaultNodes(projects: Project[]): { nodes: Node[]; edges: Edge[] } {
   const nodes: Node[] = projects.map((project, index) => ({
-    id: `deploy-${project.id}`,
-    type: 'deploy_card',
+    id: `project-${project.id}`,
+    type: 'project_node',
     position: { x: 80 + (index % 3) * 360, y: 80 + Math.floor(index / 3) * 240 },
     data: { projectId: project.id },
   }))
