@@ -6,8 +6,8 @@ export function buildDefaultNodes(project: Project): { nodes: Node[]; edges: Edg
   return {
     nodes: [
       {
-        id: `deploy-${pid}`,
-        type: 'deploy_card',
+        id: `project-${pid}`,
+        type: 'project_node',
         position: { x: 40, y: 40 },
         data: { projectId: pid },
       },
@@ -79,7 +79,7 @@ export function buildDefaultNodes(project: Project): { nodes: Node[]; edges: Edg
     edges: [
       {
         id: `e-${pid}-dl`,
-        source: `deploy-${pid}`,
+        source: `project-${pid}`,
         target: `log-${pid}`,
         animated: true,
       },

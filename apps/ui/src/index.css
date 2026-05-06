@@ -3,3 +3,47 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* XYFlow / ReactFlow dark polish (Railway-like). */
+.react-flow__controls {
+  background: rgba(9, 9, 11, 0.75); /* zinc-950 */
+  border: 1px solid rgb(63 63 70); /* zinc-700 */
+  border-radius: 12px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(10px);
+}
+
+.react-flow__controls-button {
+  background: transparent;
+  border: 0;
+  color: rgb(228 228 231); /* zinc-200 */
+}
+
+.react-flow__controls-button:hover {
+  background: rgba(39, 39, 42, 0.6); /* zinc-800 */
+}
+
+.react-flow__minimap {
+  background: rgba(9, 9, 11, 0.75);
+  border: 1px solid rgb(63 63 70);
+  border-radius: 12px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(10px);
+}
+
+.react-flow__minimap-mask {
+  fill: rgba(255, 255, 255, 0.08);
+}
+
+.react-flow__edge-path {
+  stroke: rgba(228, 228, 231, 0.55);
+}
+
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke: rgba(167, 139, 250, 0.9); /* violet-400-ish */
+}
+
+.react-flow__handle {
+  background: rgb(113 113 122); /* zinc-500 */
+  border: 1px solid rgb(63 63 70); /* zinc-700 */
+}

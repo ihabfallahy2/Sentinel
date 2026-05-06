@@ -312,6 +312,19 @@ export async function fetchGithubRepos(): Promise<
   return Array.isArray(data) ? data : []
 }
 
+export async function fetchGithubBranches(url: string): Promise<{
+  defaultBranch: string
+  branches: string[]
+}> {
+  const qs = new URLSearchParams({ url })
+  const res = await fetch(`${API_BASE}/api/github/branches?${qs.toString()}`, { headers: authHeaders() })
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string; message?: string }
+    throw new Error(err.message ?? err.error ?? `github branches: ${res.status}`)
+  }
+  return res.json() as Promise<{ defaultBranch: string; branches: string[] }>
+}
+
 export async function executeWidget(body: {
   type: 'action_button' | 'rest_explorer' | 'docker_control' | 'script_runner'
   projectId?: string

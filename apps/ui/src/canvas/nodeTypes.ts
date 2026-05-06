@@ -6,6 +6,7 @@ import { EnvEditorNode } from './nodes/EnvEditorNode'
 import { JobMonitorNode } from './nodes/JobMonitorNode'
 import { LogStreamNode } from './nodes/LogStreamNode'
 import { MetricCardNode } from './nodes/MetricCardNode'
+import { ProjectNode } from './nodes/ProjectNode'
 import { RestExplorerNode } from './nodes/RestExplorerNode'
 import { ScriptRunnerNode } from './nodes/ScriptRunnerNode'
 import { SystemStatsNode } from './nodes/SystemStatsNode'
@@ -13,6 +14,7 @@ import { WorkflowNode } from './nodes/WorkflowNode'
 
 export const nodeTypes: NodeTypes = {
   deploy_card: DeployCardNode,
+  project_node: ProjectNode,
   log_stream: LogStreamNode,
   docker_control: DockerControlNode,
   env_editor: EnvEditorNode,

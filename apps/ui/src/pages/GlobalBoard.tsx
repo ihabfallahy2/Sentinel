@@ -24,20 +24,35 @@ export function GlobalBoard() {
   })
 
   return (
-    <div className="min-h-screen bg-zinc-950 p-8 text-zinc-100">
-      <header className="mb-8">
-        <h1 className="text-3xl font-semibold tracking-tight">Sentinel</h1>
-        <p className="mt-1 text-sm text-zinc-400">
-          Pizarras libres para organizar multiples proyectos y widgets operacionales.
-        </p>
+    <div className="mx-auto w-full max-w-6xl">
+      <header className="mb-5 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-lg font-semibold tracking-tight text-zinc-100">Pizarras</h1>
+          <p className="mt-1 text-xs text-zinc-500">
+            Home estilo Railway: boards como cards compactas y acción “New”.
+          </p>
+        </div>
+        <button
+          type="button"
+          className="rounded bg-violet-600 px-3 py-2 text-xs font-medium text-white hover:bg-violet-500"
+          onClick={() => {
+            const el = document.getElementById('new-board-name')
+            if (el instanceof HTMLInputElement) {
+              el.focus()
+              el.select()
+            }
+          }}
+        >
+          + New
+        </button>
       </header>
 
       {error ? (
         <p className="mb-4 text-amber-400">{(error as Error).message}</p>
       ) : null}
 
-      <section className="mb-8 rounded-lg border border-zinc-800 bg-zinc-900/50 p-4">
-        <h2 className="text-sm font-medium text-zinc-300">+ Nueva pizarra</h2>
+      <section className="mb-6 rounded-lg border border-zinc-800 bg-zinc-900/40 p-4">
+        <h2 className="text-xs font-medium uppercase tracking-wide text-zinc-500">New board</h2>
         <form
           className="mt-3 flex flex-wrap items-end gap-3"
           onSubmit={(event) => {
@@ -50,9 +65,10 @@ export function GlobalBoard() {
           }}
         >
           <label className="flex-1 text-xs text-zinc-500">
-            Nombre de pizarra
+            Nombre
             <input
-              className="mt-1 w-full rounded border border-zinc-700 bg-zinc-950 px-2 py-1.5 text-sm"
+              id="new-board-name"
+              className="mt-1 w-full rounded border border-zinc-700 bg-zinc-950 px-2 py-2 text-sm"
               value={boardName}
               onChange={(event) => setBoardName(event.target.value)}
               required
@@ -61,27 +77,29 @@ export function GlobalBoard() {
           <button
             type="submit"
             disabled={createBoardMutation.isPending}
-            className="rounded-md bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-500 disabled:opacity-50"
+            className="rounded bg-zinc-800 px-4 py-2 text-xs font-medium text-zinc-100 hover:bg-zinc-700 disabled:opacity-50"
           >
-            {createBoardMutation.isPending ? 'Creando...' : 'Crear pizarra'}
+            {createBoardMutation.isPending ? 'Creando...' : 'Crear'}
           </button>
         </form>
       </section>
 
       <section>
-        <h2 className="mb-3 text-sm font-medium uppercase tracking-wide text-zinc-500">
-          Pizarras ({boards.length})
-        </h2>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+            Boards ({boards.length})
+          </h2>
+        </div>
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {boards.map((board) => (
             <div
               key={board.id}
-              className="flex flex-col rounded-lg border border-zinc-800 bg-zinc-900/60 p-4"
+              className="group flex flex-col rounded-lg border border-zinc-800 bg-zinc-900/40 p-4 hover:bg-zinc-900/60"
             >
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <Link
-                    className="text-lg font-medium text-white hover:text-violet-300"
+                    className="text-base font-semibold text-zinc-100 hover:text-violet-300"
                     to={`/b/${board.id}`}
                   >
                     {board.name}
