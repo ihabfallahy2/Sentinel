@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#0d0d0f;color:#e2e2e2;padding:32px 24px}
+h1{font-size:15px;font-weight:500;color:#a0a0b0;margin-bottom:28px;letter-spacing:.04em;text-transform:uppercase}
+h2{font-size:13px;font-weight:500;color:#7878a0;margin:36px 0 16px;letter-spacing:.04em;text-transform:uppercase}
+svg{width:100%;display:block}
+.diagram-wrap{background:#131318;border:0.5px solid #2a2a3a;border-radius:12px;padding:20px;margin-bottom:12px}
+
+/* node styles */
+.box{fill:#1e1e2e;stroke:#3a3a5a;stroke-width:0.5}
+.box-purple{fill:#1e1a3a;stroke:#534AB7;stroke-width:0.5}
+.box-teal{fill:#0d2a22;stroke:#1D9E75;stroke-width:0.5}
+.box-coral{fill:#2a1510;stroke:#D85A30;stroke-width:0.5}
+.box-blue{fill:#0d1e30;stroke:#378ADD;stroke-width:0.5}
+.box-amber{fill:#2a1e08;stroke:#BA7517;stroke-width:0.5}
+.box-green{fill:#0f1e08;stroke:#639922;stroke-width:0.5}
+
+.t{font-size:13px;fill:#c8c8e0;font-weight:500}
+.ts{font-size:11px;fill:#7878a0}
+.tm{font-size:12px;fill:#a0a0c0}
+.tc-purple{fill:#9090e0}
+.tc-teal{fill:#1D9E75}
+.tc-coral{fill:#D85A30}
+.tc-blue{fill:#378ADD}
+.tc-amber{fill:#EF9F27}
+.tc-green{fill:#639922}
+
+.arr{stroke:#4a4a6a;stroke-width:1;fill:none}
+.arr-purple{stroke:#534AB7;stroke-width:1;fill:none;stroke-dasharray:4 3}
+.arr-teal{stroke:#1D9E75;stroke-width:1;fill:none}
+.arr-sse{stroke:#EF9F27;stroke-width:1;fill:none;stroke-dasharray:5 3}
+
+.dot-idle{fill:#5f5f7a}
+.dot-run{fill:#EF9F27}
+.dot-ok{fill:#1D9E75}
+.dot-err{fill:#D85A30}
+
+.label-pill{fill:#1e1e2e;stroke:#3a3a5a;stroke-width:0.5}
+</style>
+</head>
+<body>
+
+<h1>Sentinel — Architecture Diagrams</h1>
+
+<!-- DIAGRAM 1: System layers -->
+<h2>1. Capas del sistema</h2>
+<div class="diagram-wrap">
+<svg viewBox="0 0 700 480">
+<defs>
+  <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+    <path d="M2 1L8 5L2 9" fill="none" stroke="#4a4a6a" stroke-width="1.5" stroke-linecap="round"/>
+  </marker>
+  <marker id="arr-t" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+    <path d="M2 1L8 5L2 9" fill="none" stroke="#1D9E75" stroke-width="1.5" stroke-linecap="round"/>
+  </marker>
+  <marker id="arr-s" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+    <path d="M2 1L8 5L2 9" fill="none" stroke="#EF9F27" stroke-width="1.5" stroke-linecap="round"/>
+  </marker>
+</defs>
+
+<!-- Layer 1: UI -->
+<rect class="box-purple" x="30" y="20" width="640" height="90" rx="10"/>
+<text class="t tc-purple" x="50" y="46">Sentinel UI</text>
+<text class="ts" x="50" y="62">React + Vite · React Flow · Zustand · shadcn/ui · TailwindCSS</text>
+<rect class="box" x="50" y="72" width="100" height="28" rx="5"/>
+<text class="ts" x="100" y="90" text-anchor="middle">Canvas</text>
+<rect class="box" x="162" y="72" width="100" height="28" rx="5"/>
+<text class="ts" x="212" y="90" text-anchor="middle">Widgets</text>
+<rect class="box" x="274" y="72" width="100" height="28" rx="5"/>
+<text class="ts" x="324" y="90" text-anchor="middle">Log viewer</text>
+<rect class="box" x="386" y="72" width="100" height="28" rx="5"/>
+<text class="ts" x="436" y="90" text-anchor="middle">Deploy wizard</text>
+<rect class="box" x="498" y="72" width="100" height="28" rx="5"/>
+<text class="ts" x="548" y="90" text-anchor="middle">Env editor</text>
+
+<!-- arrows between layers -->
+<line x1="350" y1="112" x2="350" y2="148" class="arr-teal" marker-end="url(#arr-t)" marker-start="url(#arr-t)"/>
+<text class="ts" x="365" y="134">REST + SSE</text>
+
+<!-- Layer 2: API -->
+<rect class="box-teal" x="30" y="150" width="640" height="90" rx="10"/>
+<text class="t tc-teal" x="50" y="176">Sentinel API</text>
+<text class="ts" x="50" y="192">Node.js 20 · Fastify · TypeScript · lowdb (JSON) · node-pty · dockerode</text>
+<rect class="box" x="50" y="202" width="110" height="28" rx="5"/>
+<text class="ts" x="105" y="220" text-anchor="middle">GitService</text>
+<rect class="box" x="172" y="202" width="110" height="28" rx="5"/>
+<text class="ts" x="227" y="220" text-anchor="middle">DockerService</text>
+<rect class="box" x="294" y="202" width="110" height="28" rx="5"/>
+<text class="ts" x="349" y="220" text-anchor="middle">ScriptService</text>
+<rect class="box" x="416" y="202" width="110" height="28" rx="5"/>
+<text class="ts" x="471" y="220" text-anchor="middle">EnvService</text>
+<rect class="box" x="538" y="202" width="110" height="28" rx="5"/>
+<text class="ts" x="593" y="220" text-anchor="middle">SystemService</text>
+
+<!-- arrows -->
+<line x1="200" y1="242" x2="200" y2="278" class="arr" marker-end="url(#arr)"/>
+<text class="ts" x="135" y="264">docker.sock</text>
+<line x1="420" y1="242" x2="420" y2="278" class="arr" marker-end="url(#arr)"/>
+<text class="ts" x="430" y="264">exec / pty</text>
+<line x1="560" y1="242" x2="560" y2="278" class="arr" marker-end="url(#arr)"/>
+<text class="ts" x="567" y="264">GitHub API</text>
+
+<!-- Layer 3: Projects -->
+<rect class="box-amber" x="30" y="280" width="640" height="80" rx="10"/>
+<text class="t tc-amber" x="50" y="305">Proyectos desplegados</text>
+<text class="ts" x="50" y="321">Independientes — Sentinel solo necesita docker-compose.yml + .env de cada uno</text>
+<rect class="box" x="50" y="332" width="90" height="24" rx="5"/>
+<text class="ts" x="95" y="348" text-anchor="middle">dynamoss</text>
+<rect class="box" x="152" y="332" width="90" height="24" rx="5"/>
+<text class="ts" x="197" y="348" text-anchor="middle">jellyfin</text>
+<rect class="box" x="254" y="332" width="110" height="24" rx="5"/>
+<text class="ts" x="309" y="348" text-anchor="middle">cualquier repo</text>
+<rect class="box" x="376" y="332" width="110" height="24" rx="5"/>
+<text class="ts" x="431" y="348" text-anchor="middle">futuros proyectos</text>
+
+<!-- arrows -->
+<line x1="350" y1="362" x2="350" y2="396" class="arr-sse" marker-end="url(#arr-s)"/>
+<text class="ts" x="365" y="382">opcional: sus APIs</text>
+
+<!-- Layer 4: Optional integrations -->
+<rect class="box-blue" x="30" y="398" width="640" height="60" rx="10"/>
+<text class="t tc-blue" x="50" y="422">Integraciones opcionales por proyecto</text>
+<text class="ts" x="50" y="440">Si el proyecto expone REST/WebSocket, Sentinel puede mostrar sus datos en widgets</text>
+</svg>
+</div>
+
+<!-- DIAGRAM 2: Widget anatomy -->
+<h2>2. Anatomía de un widget</h2>
+<div class="diagram-wrap">
+<svg viewBox="0 0 700 300">
+<defs>
+  <marker id="arr2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+    <path d="M2 1L8 5L2 9" fill="none" stroke="#4a4a6a" stroke-width="1.5" stroke-linecap="round"/>
+  </marker>
+</defs>
+
+<!-- Widget card -->
+<rect class="box-purple" x="30" y="40" width="220" height="180" rx="12"/>
+<!-- Status dot -->
+<circle cx="232" cy="52" r="7" class="dot-ok"/>
+<text class="ts tc-green" x="232" y="73" text-anchor="middle">online</text>
+
+<text class="t tc-purple" x="50" y="68">Deploy — dynamoss</text>
+<line x1="50" y1="76" x2="230" y2="76" stroke="#3a3a5a" stroke-width="0.5"/>
+
+<!-- content area -->
+<rect x="48" y="84" width="184" height="60" rx="6" fill="#0d0d18" stroke="#2a2a4a" stroke-width="0.5"/>
+<text class="ts" x="140" y="108" text-anchor="middle">Último commit: a3f92b</text>
+<text class="ts" x="140" y="124" text-anchor="middle">"feat: unified game API"</text>
+<text class="ts" x="140" y="140" text-anchor="middle">hace 2 horas · online</text>
+
+<!-- action buttons -->
+<rect x="48" y="154" width="85" height="26" rx="5" fill="#1a1a3a" stroke="#534AB7" stroke-width="0.5"/>
+<text class="ts tc-purple" x="90" y="171" text-anchor="middle">Deploy</text>
+<rect x="143" y="154" width="89" height="26" rx="5" fill="#2a1510" stroke="#D85A30" stroke-width="0.5"/>
+<text class="ts tc-coral" x="188" y="171" text-anchor="middle">Rollback</text>
+
+<!-- drag handle indicator -->
+<text class="ts" x="140" y="208" text-anchor="middle" fill="#3a3a5a">⠿ arrastrable</text>
+
+<!-- annotations -->
+<!-- dot -->
+<line x1="242" y1="52" x2="310" y2="52" stroke="#3a3a5a" stroke-width="0.5" stroke-dasharray="3 2"/>
+<rect class="label-pill" x="312" y="40" width="180" height="24" rx="5"/>
+<text class="ts" x="402" y="56" text-anchor="middle">Indicador de estado en esquina</text>
+
+<!-- header -->
+<line x1="140" y1="68" x2="310" y2="90" stroke="#3a3a5a" stroke-width="0.5" stroke-dasharray="3 2"/>
+<rect class="label-pill" x="312" y="78" width="160" height="24" rx="5"/>
+<text class="ts" x="392" y="94" text-anchor="middle">Tipo + nombre del proyecto</text>
+
+<!-- content -->
+<line x1="140" y1="114" x2="310" y2="130" stroke="#3a3a5a" stroke-width="0.5" stroke-dasharray="3 2"/>
+<rect class="label-pill" x="312" y="118" width="170" height="24" rx="5"/>
+<text class="ts" x="397" y="134" text-anchor="middle">Contenido específico del tipo</text>
+
+<!-- actions -->
+<line x1="140" y1="167" x2="310" y2="167" stroke="#3a3a5a" stroke-width="0.5" stroke-dasharray="3 2"/>
+<rect class="label-pill" x="312" y="155" width="150" height="24" rx="5"/>
+<text class="ts" x="387" y="171" text-anchor="middle">Acciones configurables</text>
+
+<!-- config gear -->
+<line x1="140" y1="200" x2="310" y2="210" stroke="#3a3a5a" stroke-width="0.5" stroke-dasharray="3 2"/>
+<rect class="label-pill" x="312" y="198" width="180" height="24" rx="5"/>
+<text class="ts" x="402" y="214" text-anchor="middle">Click derecho → configurar</text>
+
+<!-- status states -->
+<text class="ts" x="30" y="256">Estados del indicador:</text>
+<circle cx="190" cy="252" r="6" class="dot-idle"/>
+<text class="ts" x="202" y="256">idle</text>
+<circle cx="250" cy="252" r="6" class="dot-run"/>
+<text class="ts" x="262" y="256">running</text>
+<circle cx="330" cy="252" r="6" class="dot-ok"/>
+<text class="ts" x="342" y="256">success</text>
+<circle cx="420" cy="252" r="6" class="dot-err"/>
+<text class="ts" x="432" y="256">error</text>
+</svg>
+</div>
+
+<!-- DIAGRAM 3: Deploy flow -->
+<h2>3. Flujo de deploy</h2>
+<div class="diagram-wrap">
+<svg viewBox="0 0 700 200">
+<defs>
+  <marker id="arr3" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+    <path d="M2 1L8 5L2 9" fill="none" stroke="#1D9E75" stroke-width="1.5" stroke-linecap="round"/>
+  </marker>
+  <marker id="arr3b" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+    <path d="M2 1L8 5L2 9" fill="none" stroke="#EF9F27" stroke-width="1.5" stroke-linecap="round"/>
+  </marker>
+</defs>
+
+<!-- Steps -->
+<rect class="box-purple" x="20" y="60" width="90" height="50" rx="8"/>
+<text class="ts tc-purple" x="65" y="83" text-anchor="middle">UI click</text>
+<text class="ts tc-purple" x="65" y="99" text-anchor="middle">Deploy</text>
+
+<line x1="112" y1="85" x2="138" y2="85" stroke="#1D9E75" stroke-width="1" marker-end="url(#arr3)"/>
+
+<rect class="box-teal" x="140" y="60" width="90" height="50" rx="8"/>
+<text class="ts tc-teal" x="185" y="83" text-anchor="middle">Sentinel</text>
+<text class="ts tc-teal" x="185" y="99" text-anchor="middle">API call</text>
+
+<line x1="232" y1="85" x2="258" y2="85" stroke="#1D9E75" stroke-width="1" marker-end="url(#arr3)"/>
+
+<rect class="box-teal" x="260" y="60" width="90" height="50" rx="8"/>
+<text class="ts tc-teal" x="305" y="83" text-anchor="middle">git pull</text>
+<text class="ts tc-teal" x="305" y="99" text-anchor="middle">latest</text>
+
+<line x1="352" y1="85" x2="378" y2="85" stroke="#1D9E75" stroke-width="1" marker-end="url(#arr3)"/>
+
+<rect class="box-amber" x="380" y="60" width="90" height="50" rx="8"/>
+<text class="ts tc-amber" x="425" y="83" text-anchor="middle">docker</text>
+<text class="ts tc-amber" x="425" y="99" text-anchor="middle">compose up</text>
+
+<line x1="472" y1="85" x2="498" y2="85" stroke="#1D9E75" stroke-width="1" marker-end="url(#arr3)"/>
+
+<rect class="box-green" x="500" y="60" width="90" height="50" rx="8"/>
+<text class="ts tc-green" x="545" y="83" text-anchor="middle">healthcheck</text>
+<text class="ts tc-green" x="545" y="99" text-anchor="middle">→ online</text>
+
+<!-- SSE stream below -->
+<text class="ts" x="350" y="150" text-anchor="middle" fill="#EF9F27">logs en streaming via SSE → Log stream widget</text>
+<line x1="185" y1="110" x2="185" y2="140" stroke="#EF9F27" stroke-width="0.5" stroke-dasharray="3 2" marker-end="url(#arr3b)"/>
+<line x1="305" y1="110" x2="305" y2="140" stroke="#EF9F27" stroke-width="0.5" stroke-dasharray="3 2" marker-end="url(#arr3b)"/>
+<line x1="425" y1="110" x2="425" y2="140" stroke="#EF9F27" stroke-width="0.5" stroke-dasharray="3 2" marker-end="url(#arr3b)"/>
+<line x1="185" y1="140" x2="545" y2="140" stroke="#EF9F27" stroke-width="0.5" stroke-dasharray="3 2"/>
+<line x1="545" y1="140" x2="545" y2="110" stroke="#EF9F27" stroke-width="0.5" stroke-dasharray="3 2"/>
+</svg>
+</div>
+
+<!-- DIAGRAM 4: Workflow node -->
+<h2>4. Workflow — ejecución con estados</h2>
+<div class="diagram-wrap">
+<svg viewBox="0 0 700 220">
+<defs>
+  <marker id="arr4" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+    <path d="M2 1L8 5L2 9" fill="none" stroke="#4a4a6a" stroke-width="1.5" stroke-linecap="round"/>
+  </marker>
+  <marker id="arr4e" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+    <path d="M2 1L8 5L2 9" fill="none" stroke="#D85A30" stroke-width="1.5" stroke-linecap="round"/>
+  </marker>
+</defs>
+
+<!-- Node 1: done -->
+<rect x="30" y="80" width="110" height="60" rx="8" fill="#0d2a22" stroke="#1D9E75" stroke-width="1"/>
+<circle cx="125" cy="90" r="6" class="dot-ok"/>
+<text class="ts tc-teal" x="85" y="106" text-anchor="middle">POST /sync</text>
+<text class="ts" x="85" y="122" text-anchor="middle">games API</text>
+
+<line x1="142" y1="110" x2="168" y2="110" stroke="#4a4a6a" stroke-width="1" marker-end="url(#arr4)"/>
+
+<!-- Node 2: running -->
+<rect x="170" y="80" width="110" height="60" rx="8" fill="#1e1e2e" stroke="#EF9F27" stroke-width="1"/>
+<circle cx="265" cy="90" r="6" class="dot-run"/>
+<text class="ts tc-amber" x="225" y="106" text-anchor="middle">wait job</text>
+<text class="ts" x="225" y="122" text-anchor="middle">completado</text>
+
+<line x1="282" y1="110" x2="308" y2="110" stroke="#4a4a6a" stroke-width="1" marker-end="url(#arr4)"/>
+
+<!-- Node 3: idle -->
+<rect x="310" y="80" width="110" height="60" rx="8" fill="#131318" stroke="#3a3a5a" stroke-width="0.5"/>
+<circle cx="405" cy="90" r="6" class="dot-idle"/>
+<text class="ts" x="365" y="106" text-anchor="middle">run script</text>
+<text class="ts" x="365" y="122" text-anchor="middle">backup.sh</text>
+
+<line x1="422" y1="110" x2="448" y2="110" stroke="#4a4a6a" stroke-width="1" marker-end="url(#arr4)"/>
+
+<!-- Node 4: idle -->
+<rect x="450" y="80" width="110" height="60" rx="8" fill="#131318" stroke="#3a3a5a" stroke-width="0.5"/>
+<circle cx="545" cy="90" r="6" class="dot-idle"/>
+<text class="ts" x="505" y="106" text-anchor="middle">notify</text>
+<text class="ts" x="505" y="122" text-anchor="middle">webhook</text>
+
+<!-- On error branch -->
+<text class="ts tc-coral" x="225" y="165" text-anchor="middle">si falla →</text>
+<line x1="225" y1="142" x2="225" y2="172" stroke="#D85A30" stroke-width="0.5" stroke-dasharray="3 2"/>
+<line x1="225" y1="172" x2="590" y2="172" stroke="#D85A30" stroke-width="0.5" stroke-dasharray="3 2"/>
+<rect x="592" y="155" width="90" height="32" rx="6" fill="#2a1510" stroke="#D85A30" stroke-width="0.5"/>
+<text class="ts tc-coral" x="637" y="175" text-anchor="middle">rollback.sh</text>
+<line x1="590" y1="172" x2="592" y2="172" stroke="#D85A30" stroke-width="0.5" marker-end="url(#arr4e)"/>
+</svg>
+</div>
+
+<!-- DIAGRAM 5: Canvas global vs project -->
+<h2>5. Pizarra global vs pizarra de proyecto</h2>
+<div class="diagram-wrap">
+<svg viewBox="0 0 700 260">
+<!-- Global board -->
+<rect class="box-purple" x="20" y="20" width="310" height="220" rx="12"/>
+<text class="t tc-purple" x="40" y="46">Pizarra global</text>
+<text class="ts" x="40" y="62">Vista de todos los proyectos</text>
+
+<rect class="box" x="40" y="76" width="120" height="64" rx="8"/>
+<circle cx="148" cy="86" r="5" class="dot-ok"/>
+<text class="ts" x="100" y="100" text-anchor="middle">dynamoss</text>
+<text class="ts" x="100" y="116" text-anchor="middle">● online</text>
+<text class="ts" x="100" y="132" text-anchor="middle">v2.1.0</text>
+
+<rect class="box" x="175" y="76" width="120" height="64" rx="8"/>
+<circle cx="283" cy="86" r="5" class="dot-err"/>
+<text class="ts" x="235" y="100" text-anchor="middle">jellyfin</text>
+<text class="ts tc-coral" x="235" y="116" text-anchor="middle">● error</text>
+<text class="ts" x="235" y="132" text-anchor="middle">build failed</text>
+
+<rect class="box" x="40" y="155" width="120" height="64" rx="8"/>
+<circle cx="148" cy="165" r="5" class="dot-idle"/>
+<text class="ts" x="100" y="179" text-anchor="middle">nuevo-repo</text>
+<text class="ts" x="100" y="195" text-anchor="middle">+ deploy</text>
+
+<rect x="175" y="155" width="120" height="64" rx="8" fill="#131318" stroke="#2a2a3a" stroke-width="0.5" stroke-dasharray="4 3"/>
+<text class="ts" x="235" y="185" text-anchor="middle" fill="#3a3a5a">+ Add project</text>
+
+<!-- arrow -->
+<text class="ts" x="345" y="135" text-anchor="middle">click en</text>
+<text class="ts" x="345" y="151" text-anchor="middle">proyecto</text>
+<line x1="332" y1="142" x2="368" y2="142" stroke="#534AB7" stroke-width="1" stroke-dasharray="3 2"/>
+
+<!-- Project board -->
+<rect class="box-teal" x="370" y="20" width="310" height="220" rx="12"/>
+<text class="t tc-teal" x="390" y="46">Pizarra de proyecto</text>
+<text class="ts" x="390" y="62">dynamoss — canvas propio</text>
+
+<rect class="box" x="390" y="76" width="120" height="44" rx="6"/>
+<circle cx="498" cy="84" r="4" class="dot-ok"/>
+<text class="ts" x="450" y="96" text-anchor="middle">Deploy card</text>
+<text class="ts tc-green" x="450" y="112" text-anchor="middle">v2.1.0 online</text>
+
+<rect class="box" x="524" y="76" width="120" height="44" rx="6"/>
+<circle cx="632" cy="84" r="4" class="dot-run"/>
+<text class="ts" x="584" y="96" text-anchor="middle">Job monitor</text>
+<text class="ts tc-amber" x="584" y="112" text-anchor="middle">3 jobs activos</text>
+
+<rect class="box" x="390" y="132" width="120" height="44" rx="6"/>
+<text class="ts" x="450" y="152" text-anchor="middle">Action button</text>
+<text class="ts" x="450" y="168" text-anchor="middle">POST /sync</text>
+
+<rect class="box" x="524" y="132" width="120" height="44" rx="6"/>
+<text class="ts" x="584" y="152" text-anchor="middle">Log stream</text>
+<text class="ts" x="584" y="168" text-anchor="middle">live docker logs</text>
+
+<rect class="box" x="390" y="188" width="254" height="36" rx="6"/>
+<text class="ts" x="517" y="210" text-anchor="middle">Workflow — deploy + test + notify</text>
+</svg>
+</div>
+
+</body>
+</html>
