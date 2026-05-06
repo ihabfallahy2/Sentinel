@@ -7,19 +7,29 @@ import {
   MiniMap,
   ReactFlow,
   ReactFlowProvider,
+  useReactFlow,
   useEdgesState,
   useNodesState,
   type Edge,
+  type NodeMouseHandler,
   type Node,
+  type PaneMouseHandler,
 } from '@xyflow/react'
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { fetchCanvas, fetchProject, saveCanvas } from '../api/sentinelClient'
 import { buildDefaultNodes } from '../canvas/buildDefaultNodes'
 import { nodeTypes } from '../canvas/nodeTypes'
+import { ContextMenu, type ContextMenuAction } from '../components/ContextMenu'
+
+type ContextMenuState =
+  | { type: 'pane'; x: number; y: number }
+  | { type: 'node'; x: number; y: number; nodeId: string }
+  | null
 
 function ProjectCanvas({ projectId }: { projectId: string }) {
+  const flow = useReactFlow()
   const { data: project, isLoading: loadingProject } = useQuery({
     queryKey: ['project', projectId],
     queryFn: () => fetchProject(projectId),
@@ -33,8 +43,10 @@ function ProjectCanvas({ projectId }: { projectId: string }) {
 
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([])
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([])
+  const [contextMenu, setContextMenu] = useState<ContextMenuState>(null)
   const initialized = useRef(false)
   const skipNextSave = useRef(true)
+  const importInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     initialized.current = false
@@ -113,6 +125,114 @@ function ProjectCanvas({ projectId }: { projectId: string }) {
     [setEdges, setNodes],
   )
 
+  const closeContextMenu = useCallback(() => setContextMenu(null), [])
+
+  useEffect(() => {
+    const onEsc = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setContextMenu(null)
+      }
+    }
+    window.addEventListener('keydown', onEsc)
+    return () => window.removeEventListener('keydown', onEsc)
+  }, [])
+
+  const onPaneContextMenu = useCallback<PaneMouseHandler>(
+    (event) => {
+      event.preventDefault()
+      setContextMenu({ type: 'pane', x: event.clientX, y: event.clientY })
+    },
+    [setContextMenu],
+  )
+
+  const onNodeContextMenu = useCallback<NodeMouseHandler<Node>>(
+    (event, node) => {
+      event.preventDefault()
+      setContextMenu({
+        type: 'node',
+        nodeId: node.id,
+        x: event.clientX,
+        y: event.clientY,
+      })
+    },
+    [setContextMenu],
+  )
+
+  const contextMenuActions = useMemo<ContextMenuAction[]>(() => {
+    if (!contextMenu) {
+      return []
+    }
+    if (contextMenu.type === 'pane') {
+      return [
+        {
+          id: 'import-repository',
+          label: '+ Importar repositorio (proximamente)',
+          onSelect: () => toast.message('Este flujo se implementa en la siguiente iteracion'),
+        },
+        {
+          id: 'add-widget',
+          label: '+ Anadir widget (proximamente)',
+          onSelect: () => toast.message('Los shortcuts de widgets llegan en el siguiente PR'),
+        },
+        {
+          id: 'fit-view',
+          label: 'Ajustar vista',
+          onSelect: () => flow.fitView({ duration: 250 }),
+        },
+        {
+          id: 'export-canvas',
+          label: 'Exportar canvas',
+          onSelect: exportLayout,
+        },
+        {
+          id: 'import-canvas',
+          label: 'Importar canvas',
+          onSelect: () => importInputRef.current?.click(),
+        },
+      ]
+    }
+
+    return [
+      {
+        id: 'open-settings',
+        label: 'Abrir configuracion (proximamente)',
+        onSelect: () => toast.message('El panel lateral de proyecto llega en siguiente iteracion'),
+      },
+      {
+        id: 'duplicate-node',
+        label: 'Duplicar tarjeta',
+        onSelect: () => {
+          setNodes((current) => {
+            const source = current.find((node) => node.id === contextMenu.nodeId)
+            if (!source) {
+              return current
+            }
+            const duplicate: Node = {
+              ...source,
+              id: crypto.randomUUID(),
+              position: { x: source.position.x + 40, y: source.position.y + 40 },
+              selected: false,
+            }
+            return [...current, duplicate]
+          })
+        },
+      },
+      {
+        id: 'delete-node',
+        label: 'Eliminar del canvas',
+        danger: true,
+        onSelect: () => {
+          setNodes((current) => current.filter((node) => node.id !== contextMenu.nodeId))
+          setEdges((current) =>
+            current.filter(
+              (edge) => edge.source !== contextMenu.nodeId && edge.target !== contextMenu.nodeId,
+            ),
+          )
+        },
+      },
+    ]
+  }, [contextMenu, exportLayout, flow, setEdges, setNodes])
+
   if (loadingProject || !project) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center text-zinc-400">
@@ -142,6 +262,7 @@ function ProjectCanvas({ projectId }: { projectId: string }) {
           <label className="cursor-pointer rounded border border-zinc-700 px-3 py-1 text-xs hover:bg-zinc-900">
             Importar
             <input
+              ref={importInputRef}
               type="file"
               accept="application/json"
               className="hidden"
@@ -164,12 +285,22 @@ function ProjectCanvas({ projectId }: { projectId: string }) {
           nodeTypes={nodeTypes}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
+          onPaneContextMenu={onPaneContextMenu}
+          onNodeContextMenu={onNodeContextMenu}
           fitView
         >
           <Background gap={20} size={1} variant={BackgroundVariant.Dots} />
           <Controls />
           <MiniMap />
         </ReactFlow>
+        {contextMenu ? (
+          <ContextMenu
+            x={contextMenu.x}
+            y={contextMenu.y}
+            actions={contextMenuActions}
+            onClose={closeContextMenu}
+          />
+        ) : null}
       </div>
     </>
   )
