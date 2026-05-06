@@ -1,5 +1,7 @@
 import { useMemo } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
+import { fetchBoard } from '../api/sentinelClient'
 
 function useTopbarTitle(): { crumb: string; title: string } {
   const location = useLocation()
@@ -23,7 +25,16 @@ function useTopbarTitle(): { crumb: string; title: string } {
 }
 
 export function Topbar() {
+  const params = useParams()
+  const boardId = params.boardId ?? ''
+  const { data: board } = useQuery({
+    queryKey: ['board', boardId],
+    queryFn: () => fetchBoard(boardId),
+    enabled: boardId.length > 0,
+  })
   const { crumb, title } = useTopbarTitle()
+  const displayTitle =
+    crumb === 'Pizarras' && boardId.length > 0 ? board?.name ?? 'Cargando board…' : title
   return (
     <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-zinc-900 bg-zinc-950/80 px-4 py-3 backdrop-blur">
       <div className="min-w-0">
@@ -36,7 +47,7 @@ export function Topbar() {
             <span>{crumb}</span>
           )}
           <span className="text-zinc-700">/</span>
-          <span className="truncate text-zinc-300">{title}</span>
+          <span className="truncate text-zinc-300">{displayTitle}</span>
         </div>
         <p className="truncate text-sm font-semibold text-zinc-100">Sentinel</p>
       </div>

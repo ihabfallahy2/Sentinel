@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import { createBoard, fetchBoards } from '../api/sentinelClient'
 
-export function GlobalBoard() {
+export function BoardsHomePage() {
   const qc = useQueryClient()
   const [boardName, setBoardName] = useState('')
 
@@ -47,9 +47,7 @@ export function GlobalBoard() {
         </button>
       </header>
 
-      {error ? (
-        <p className="mb-4 text-amber-400">{(error as Error).message}</p>
-      ) : null}
+      {error ? <p className="mb-4 text-amber-400">{(error as Error).message}</p> : null}
 
       <section className="mb-6 rounded-lg border border-zinc-800 bg-zinc-900/40 p-4">
         <h2 className="text-xs font-medium uppercase tracking-wide text-zinc-500">New board</h2>
@@ -134,11 +132,10 @@ export function GlobalBoard() {
               </div>
             </div>
           ))}
-          {boards.length === 0 ? (
-            <p className="text-sm text-zinc-600">Aún no hay pizarras.</p>
-          ) : null}
+          {boards.length === 0 ? <p className="text-sm text-zinc-600">Aún no hay pizarras.</p> : null}
         </div>
       </section>
     </div>
   )
 }
+

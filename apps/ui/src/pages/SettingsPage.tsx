@@ -4,14 +4,21 @@ function getStoredApiKey(): string {
   return localStorage.getItem('sentinel_api_key') ?? ''
 }
 
+function getStoredApiUrl(): string {
+  return localStorage.getItem('sentinel_api_url') ?? ''
+}
+
 export function SettingsPage() {
   const [apiKey, setApiKey] = useState('')
+  const [apiUrl, setApiUrl] = useState('')
 
   useEffect(() => {
     setApiKey(getStoredApiKey())
+    setApiUrl(getStoredApiUrl())
   }, [])
 
   const hasKey = useMemo(() => apiKey.trim().length > 0, [apiKey])
+  const hasUrl = useMemo(() => apiUrl.trim().length > 0, [apiUrl])
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-4">
@@ -27,6 +34,15 @@ export function SettingsPage() {
         </p>
         <div className="mt-3 grid gap-2">
           <label className="text-xs text-zinc-400">
+            API URL (opcional)
+            <input
+              className="mt-1 w-full rounded border border-zinc-700 bg-zinc-950 px-2 py-2 text-sm"
+              value={apiUrl}
+              onChange={(e) => setApiUrl(e.target.value)}
+              placeholder="http://localhost:3500"
+            />
+          </label>
+          <label className="text-xs text-zinc-400">
             API Key
             <input
               className="mt-1 w-full rounded border border-zinc-700 bg-zinc-950 px-2 py-2 text-sm"
@@ -39,8 +55,13 @@ export function SettingsPage() {
             <button
               type="button"
               className="rounded bg-violet-600 px-3 py-2 text-xs font-medium text-white hover:bg-violet-500"
-              onClick={() => localStorage.setItem('sentinel_api_key', apiKey.trim())}
-              disabled={!hasKey}
+              onClick={() => {
+                const nextUrl = apiUrl.trim()
+                if (nextUrl) localStorage.setItem('sentinel_api_url', nextUrl)
+                else localStorage.removeItem('sentinel_api_url')
+                localStorage.setItem('sentinel_api_key', apiKey.trim())
+              }}
+              disabled={!hasKey && !hasUrl}
             >
               Guardar
             </button>
@@ -49,7 +70,9 @@ export function SettingsPage() {
               className="rounded border border-zinc-700 px-3 py-2 text-xs text-zinc-200 hover:bg-zinc-900"
               onClick={() => {
                 localStorage.removeItem('sentinel_api_key')
+                localStorage.removeItem('sentinel_api_url')
                 setApiKey('')
+                setApiUrl('')
               }}
             >
               Limpiar
