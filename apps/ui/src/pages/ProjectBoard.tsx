@@ -192,6 +192,17 @@ function ProjectCanvas({ boardId }: { boardId: string }) {
     [setContextMenu],
   )
 
+  const onNodeClick = useCallback<NodeMouseHandler<Node>>(
+    (_event, node) => {
+      const projectId = getProjectIdFromNode(nodes, node.id)
+      if (!projectId) return
+      setSelectedProjectId(projectId)
+      setActivePanelTab('deployments')
+      setIsPanelOpen(true)
+    },
+    [nodes],
+  )
+
   const contextMenuActions = useMemo<ContextMenuAction[]>(() => {
     if (!contextMenu) {
       return []
@@ -204,9 +215,59 @@ function ProjectCanvas({ boardId }: { boardId: string }) {
           onSelect: () => setShowImportPanel(true),
         },
         {
-          id: 'add-widget',
-          label: '+ Anadir widget (proximamente)',
-          onSelect: () => toast.message('Los shortcuts de widgets llegan en el siguiente PR'),
+          id: 'add-widget-system',
+          label: '+ Anadir widget: system_stats',
+          onSelect: () => {
+            setNodes((current) => [
+              ...current,
+              {
+                id: `system-${crypto.randomUUID()}`,
+                type: 'system_stats',
+                position: flow.screenToFlowPosition({ x: contextMenu.x, y: contextMenu.y }),
+                data: {},
+              },
+            ])
+          },
+        },
+        {
+          id: 'add-widget-log',
+          label: '+ Anadir widget: log_stream',
+          onSelect: () => {
+            const projectId = board?.projects[0]?.id
+            if (!projectId) {
+              toast.error('Importa al menos un repositorio para este widget')
+              return
+            }
+            setNodes((current) => [
+              ...current,
+              {
+                id: `log-${crypto.randomUUID()}`,
+                type: 'log_stream',
+                position: flow.screenToFlowPosition({ x: contextMenu.x, y: contextMenu.y }),
+                data: { projectId },
+              },
+            ])
+          },
+        },
+        {
+          id: 'add-widget-metric',
+          label: '+ Anadir widget: metric_card',
+          onSelect: () => {
+            const projectId = board?.projects[0]?.id
+            if (!projectId) {
+              toast.error('Importa al menos un repositorio para este widget')
+              return
+            }
+            setNodes((current) => [
+              ...current,
+              {
+                id: `metric-${crypto.randomUUID()}`,
+                type: 'metric_card',
+                position: flow.screenToFlowPosition({ x: contextMenu.x, y: contextMenu.y }),
+                data: { projectId },
+              },
+            ])
+          },
         },
         {
           id: 'fit-view',
@@ -310,7 +371,35 @@ function ProjectCanvas({ boardId }: { boardId: string }) {
         },
       },
     ]
-  }, [boardId, contextMenu, exportLayout, flow, nodes, qc, setEdges, setNodes])
+  }, [board?.projects, boardId, contextMenu, exportLayout, flow, nodes, qc, setEdges, setNodes])
+
+  useEffect(() => {
+    if (!board || !initialized.current) return
+    const boardProjectIds = new Set(board.projects.map((project) => project.id))
+    setNodes((current) => {
+      const filtered = current.filter((node) => {
+        const projectId = getProjectIdFromNode(current, node.id)
+        return !projectId || boardProjectIds.has(projectId)
+      })
+      const existingProjectIds = new Set(
+        filtered
+          .map((node) => getProjectIdFromNode(filtered, node.id))
+          .filter((id): id is string => Boolean(id)),
+      )
+      const missingProjects = board.projects.filter((project) => !existingProjectIds.has(project.id))
+      if (missingProjects.length === 0) {
+        return filtered
+      }
+      const yBase = 80 + Math.ceil(Math.max(filtered.length, 1) / 3) * 160
+      const appended = missingProjects.map((project, index) => ({
+        id: `deploy-${project.id}`,
+        type: 'deploy_card',
+        position: { x: 80 + (index % 3) * 360, y: yBase + Math.floor(index / 3) * 220 },
+        data: { projectId: project.id },
+      }))
+      return [...filtered, ...appended]
+    })
+  }, [board, setNodes])
 
   if (loadingBoard || !board) {
     return (
@@ -381,6 +470,7 @@ function ProjectCanvas({ boardId }: { boardId: string }) {
           onEdgesChange={onEdgesChange}
           onPaneContextMenu={onPaneContextMenu}
           onNodeContextMenu={onNodeContextMenu}
+          onNodeClick={onNodeClick}
           fitView
         >
           <Background gap={20} size={1} variant={BackgroundVariant.Dots} />
