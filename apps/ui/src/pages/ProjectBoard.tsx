@@ -400,7 +400,6 @@ function ProjectCanvas({ boardId }: { boardId: string }) {
       return [...filtered, ...appended]
     })
   }, [board, setNodes])
-
   if (loadingBoard || !board) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center text-zinc-400">

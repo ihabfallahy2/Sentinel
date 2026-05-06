@@ -42,7 +42,7 @@ export function DeployCardNode({ data }: NodeProps<DeployCardData>) {
         />
       </div>
       <p className="mt-2 text-xs text-zinc-500">
-        Rama <span className="text-zinc-300">{project.branch}</span>
+        Rama <span className="text-zinc-300">{project.branch}</span> · Click derecho para acciones
         {project.lastDeployedAt ? (
           <>
             {' '}
