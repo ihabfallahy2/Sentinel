@@ -1,4 +1,5 @@
 export * from './canvas'
+export * from './board'
 export * from './deployment'
 export * from './project'
 export * from './widget'

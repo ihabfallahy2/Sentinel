@@ -1,4 +1,12 @@
-import type { CanvasLayout, Deployment, Project, WorkflowStep } from '@sentinel/shared-types'
+import type {
+  Board,
+  BoardDetail,
+  BoardSummary,
+  CanvasLayout,
+  Deployment,
+  Project,
+  WorkflowStep,
+} from '@sentinel/shared-types'
 
 const API_BASE = import.meta.env.VITE_API_URL ?? ''
 
@@ -41,6 +49,61 @@ export async function fetchProjects(): Promise<Project[]> {
     throw new Error(`projects: ${res.status}`)
   }
   return res.json() as Promise<Project[]>
+}
+
+export async function fetchBoards(): Promise<BoardSummary[]> {
+  const res = await fetch(`${API_BASE}/api/boards`, { headers: authHeaders() })
+  if (!res.ok) {
+    throw new Error(`boards: ${res.status}`)
+  }
+  return res.json() as Promise<BoardSummary[]>
+}
+
+export async function fetchBoard(id: string): Promise<BoardDetail> {
+  const res = await fetch(`${API_BASE}/api/boards/${id}`, { headers: authHeaders() })
+  if (!res.ok) {
+    throw new Error(`board: ${res.status}`)
+  }
+  return res.json() as Promise<BoardDetail>
+}
+
+export async function createBoard(body: { name: string }): Promise<Board> {
+  const res = await fetch(`${API_BASE}/api/boards`, {
+    method: 'POST',
+    headers: authHeadersJson(),
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string; message?: string }
+    throw new Error(err.message ?? err.error ?? `createBoard: ${res.status}`)
+  }
+  return res.json() as Promise<Board>
+}
+
+export async function importBoardProject(
+  boardId: string,
+  body: { githubUrl: string; branch?: string; name?: string },
+): Promise<Project> {
+  const res = await fetch(`${API_BASE}/api/boards/${boardId}/projects/import`, {
+    method: 'POST',
+    headers: authHeadersJson(),
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string; message?: string }
+    throw new Error(err.message ?? err.error ?? `importBoardProject: ${res.status}`)
+  }
+  return res.json() as Promise<Project>
+}
+
+export async function removeBoardProject(boardId: string, projectId: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/api/boards/${boardId}/projects/${projectId}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  })
+  if (!res.ok) {
+    throw new Error(`removeBoardProject: ${res.status}`)
+  }
 }
 
 export async function createProject(body: {
@@ -132,6 +195,27 @@ export async function fetchCanvas(projectId: string): Promise<CanvasLayout> {
   return res.json() as Promise<CanvasLayout>
 }
 
+export async function fetchBoardCanvas(boardId: string): Promise<CanvasLayout> {
+  const res = await fetch(`${API_BASE}/api/boards/${boardId}/canvas`, {
+    headers: authHeaders(),
+  })
+  if (!res.ok) {
+    throw new Error(`boardCanvas: ${res.status}`)
+  }
+  return res.json() as Promise<CanvasLayout>
+}
+
+export async function saveBoardCanvas(boardId: string, layout: CanvasLayout): Promise<void> {
+  const res = await fetch(`${API_BASE}/api/boards/${boardId}/canvas`, {
+    method: 'PUT',
+    headers: authHeadersJson(),
+    body: JSON.stringify(layout),
+  })
+  if (!res.ok) {
+    throw new Error(`saveBoardCanvas: ${res.status}`)
+  }
+}
+
 export async function saveCanvas(projectId: string, layout: CanvasLayout): Promise<void> {
   const res = await fetch(`${API_BASE}/api/projects/${projectId}/canvas`, {
     method: 'PUT',
@@ -162,6 +246,16 @@ export async function saveEnv(projectId: string, content: string): Promise<void>
   if (!res.ok) {
     throw new Error(`saveEnv: ${res.status}`)
   }
+}
+
+export async function fetchEnvDiff(projectId: string): Promise<{ env: string; example: string }> {
+  const res = await fetch(`${API_BASE}/api/projects/${projectId}/env/diff`, {
+    headers: authHeaders(),
+  })
+  if (!res.ok) {
+    throw new Error(`env-diff: ${res.status}`)
+  }
+  return res.json() as Promise<{ env: string; example: string }>
 }
 
 export async function runScript(
