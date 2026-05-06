@@ -22,6 +22,7 @@ import { fetchCanvas, fetchProject, saveCanvas } from '../api/sentinelClient'
 import { buildDefaultNodes } from '../canvas/buildDefaultNodes'
 import { nodeTypes } from '../canvas/nodeTypes'
 import { ContextMenu, type ContextMenuAction } from '../components/ContextMenu'
+import { ProjectPanel, type ProjectPanelTab } from '../components/ProjectPanel'
 
 type ContextMenuState =
   | { type: 'pane'; x: number; y: number }
@@ -44,6 +45,8 @@ function ProjectCanvas({ projectId }: { projectId: string }) {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([])
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([])
   const [contextMenu, setContextMenu] = useState<ContextMenuState>(null)
+  const [isPanelOpen, setIsPanelOpen] = useState(false)
+  const [activePanelTab, setActivePanelTab] = useState<ProjectPanelTab>('deployments')
   const initialized = useRef(false)
   const skipNextSave = useRef(true)
   const importInputRef = useRef<HTMLInputElement>(null)
@@ -194,9 +197,36 @@ function ProjectCanvas({ projectId }: { projectId: string }) {
 
     return [
       {
+        id: 'open-deployments',
+        label: 'Ver deployments',
+        onSelect: () => {
+          setActivePanelTab('deployments')
+          setIsPanelOpen(true)
+        },
+      },
+      {
+        id: 'open-variables',
+        label: 'Ver variables',
+        onSelect: () => {
+          setActivePanelTab('variables')
+          setIsPanelOpen(true)
+        },
+      },
+      {
+        id: 'open-metrics',
+        label: 'Ver metricas',
+        onSelect: () => {
+          setActivePanelTab('metrics')
+          setIsPanelOpen(true)
+        },
+      },
+      {
         id: 'open-settings',
-        label: 'Abrir configuracion (proximamente)',
-        onSelect: () => toast.message('El panel lateral de proyecto llega en siguiente iteracion'),
+        label: 'Abrir configuracion',
+        onSelect: () => {
+          setActivePanelTab('settings')
+          setIsPanelOpen(true)
+        },
       },
       {
         id: 'duplicate-node',
@@ -254,6 +284,16 @@ function ProjectCanvas({ projectId }: { projectId: string }) {
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
+            className="rounded border border-violet-700 px-3 py-1 text-xs text-violet-200 hover:bg-violet-950/40"
+            onClick={() => {
+              setActivePanelTab('deployments')
+              setIsPanelOpen(true)
+            }}
+          >
+            Abrir panel
+          </button>
+          <button
+            type="button"
             className="rounded border border-zinc-700 px-3 py-1 text-xs hover:bg-zinc-900"
             onClick={exportLayout}
           >
@@ -301,6 +341,13 @@ function ProjectCanvas({ projectId }: { projectId: string }) {
             onClose={closeContextMenu}
           />
         ) : null}
+        <ProjectPanel
+          project={project}
+          open={isPanelOpen}
+          activeTab={activePanelTab}
+          onChangeTab={setActivePanelTab}
+          onClose={() => setIsPanelOpen(false)}
+        />
       </div>
     </>
   )
