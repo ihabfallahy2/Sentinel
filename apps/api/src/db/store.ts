@@ -3,12 +3,14 @@ import { join } from 'node:path'
 
 export type SentinelDb = {
   projects: unknown[]
+  boards: unknown[]
   deployments: unknown[]
   canvasLayouts: Record<string, unknown>
 }
 
 const defaultDb: SentinelDb = {
   projects: [],
+  boards: [],
   deployments: [],
   canvasLayouts: {},
 }
@@ -24,6 +26,7 @@ export async function readDb(dataDir: string): Promise<SentinelDb> {
     const parsed = JSON.parse(raw) as Partial<SentinelDb>
     return {
       projects: Array.isArray(parsed.projects) ? parsed.projects : [],
+      boards: Array.isArray(parsed.boards) ? parsed.boards : [],
       deployments: Array.isArray(parsed.deployments) ? parsed.deployments : [],
       canvasLayouts:
         parsed.canvasLayouts && typeof parsed.canvasLayouts === 'object'

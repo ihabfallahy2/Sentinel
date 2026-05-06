@@ -6,7 +6,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/" element={<GlobalBoard />} />
-      <Route path="/p/:projectId" element={<ProjectBoard />} />
+      <Route path="/b/:boardId" element={<ProjectBoard />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )

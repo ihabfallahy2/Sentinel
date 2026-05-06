@@ -3,6 +3,7 @@ import Fastify from 'fastify'
 import { join } from 'node:path'
 import { readDb } from './db/store'
 import { requireApiKey } from './middleware/auth'
+import { registerBoardsRoutes } from './routes/boards'
 import { registerGithubRoutes } from './routes/github'
 import { registerProjectsRoutes } from './routes/projects'
 import { registerSystemRoutes } from './routes/system'
@@ -29,6 +30,7 @@ async function main(): Promise<void> {
       await registerSystemRoutes(api)
       await registerGithubRoutes(api)
       await registerWidgetRoutes(api, dataDir)
+      await registerBoardsRoutes(api, dataDir, projectsDir)
       await registerProjectsRoutes(api, dataDir, projectsDir)
     },
     { prefix: '/api' },

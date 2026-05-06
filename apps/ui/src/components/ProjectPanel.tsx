@@ -7,8 +7,10 @@ import {
   dockerAction,
   fetchDeployments,
   fetchEnv,
+  fetchEnvDiff,
   fetchSystemStats,
   rollbackProject,
+  runScript,
   saveEnv,
 } from '../api/sentinelClient'
 
@@ -32,6 +34,9 @@ type ProjectPanelProps = {
 export function ProjectPanel({ project, open, activeTab, onChangeTab, onClose }: ProjectPanelProps) {
   const qc = useQueryClient()
   const [envDraft, setEnvDraft] = useState<string | null>(null)
+  const [scriptPath, setScriptPath] = useState('scripts/deploy.sh')
+  const [scriptOutput, setScriptOutput] = useState<string | null>(null)
+  const [expandedDeploymentId, setExpandedDeploymentId] = useState<string | null>(null)
 
   const { data: deployments = [], isLoading: loadingDeployments } = useQuery({
     queryKey: ['deployments', project.id],
@@ -43,6 +48,12 @@ export function ProjectPanel({ project, open, activeTab, onChangeTab, onClose }:
   const { data: envData } = useQuery({
     queryKey: ['project-env', project.id],
     queryFn: () => fetchEnv(project.id),
+    enabled: open && activeTab === 'variables',
+  })
+
+  const { data: envDiff } = useQuery({
+    queryKey: ['project-env-diff', project.id],
+    queryFn: () => fetchEnvDiff(project.id),
     enabled: open && activeTab === 'variables',
   })
 
@@ -91,6 +102,28 @@ export function ProjectPanel({ project, open, activeTab, onChangeTab, onClose }:
     onError: (error: Error) => toast.error(error.message),
   })
 
+  const restartMutation = useMutation({
+    mutationFn: () => dockerAction(project.id, 'restart'),
+    onSuccess: () => toast.success('Servicios reiniciados'),
+    onError: (error: Error) => toast.error(error.message),
+  })
+
+  const rebuildMutation = useMutation({
+    mutationFn: () => dockerAction(project.id, 'rebuild'),
+    onSuccess: () => toast.success('Rebuild lanzado'),
+    onError: (error: Error) => toast.error(error.message),
+  })
+
+  const runScriptMutation = useMutation({
+    mutationFn: (path: string) => runScript(project.id, path),
+    onSuccess: (result) => {
+      const output = [result.stdout?.trim(), result.stderr?.trim()].filter(Boolean).join('\n')
+      setScriptOutput(output.length > 0 ? output : '(sin output)')
+      toast.success(result.ok ? 'Script ejecutado' : `Script finalizo con codigo ${result.code}`)
+    },
+    onError: (error: Error) => toast.error(error.message),
+  })
+
   const latestSuccessfulDeployment = useMemo(
     () => deployments.find((item) => item.status === 'success' || item.status === 'rolled_back'),
     [deployments],
@@ -98,9 +131,16 @@ export function ProjectPanel({ project, open, activeTab, onChangeTab, onClose }:
 
   useEffect(() => {
     setEnvDraft(null)
+    setExpandedDeploymentId(null)
   }, [project.id, activeTab])
 
   const envContent = envDraft ?? envData?.content ?? ''
+  const envDiffSummary = useMemo(() => {
+    if (!envDiff) {
+      return []
+    }
+    return computeMissingEnvKeys(envDiff.example, envDiff.env)
+  }, [envDiff])
 
   return (
     <aside
@@ -187,10 +227,40 @@ export function ProjectPanel({ project, open, activeTab, onChangeTab, onClose }:
             <ul className="space-y-2 text-xs">
               {deployments.slice(0, 8).map((dep) => (
                 <li key={dep.id} className="rounded border border-zinc-800 bg-zinc-950/70 p-2">
-                  <p className="font-medium text-zinc-200">
-                    {dep.status.toUpperCase()} · {dep.commitSha.slice(0, 7)}
-                  </p>
-                  <p className="text-zinc-500">{dep.commitMessage || 'Sin mensaje de commit'}</p>
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="font-medium text-zinc-200">
+                        {dep.status.toUpperCase()} · {dep.commitSha.slice(0, 7)}
+                      </p>
+                      <p className="text-zinc-500">{dep.commitMessage || 'Sin mensaje de commit'}</p>
+                    </div>
+                    <div className="flex flex-col items-end gap-1">
+                      {(dep.status === 'success' || dep.status === 'rolled_back') && (
+                        <button
+                          type="button"
+                          className="rounded border border-zinc-700 px-2 py-1 text-[11px] hover:bg-zinc-800"
+                          disabled={rollbackMutation.isPending}
+                          onClick={() => rollbackMutation.mutate(dep.id)}
+                        >
+                          Rollback
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className="rounded border border-zinc-700 px-2 py-1 text-[11px] hover:bg-zinc-800"
+                        onClick={() =>
+                          setExpandedDeploymentId((current) => (current === dep.id ? null : dep.id))
+                        }
+                      >
+                        {expandedDeploymentId === dep.id ? 'Ocultar logs' : 'Ver logs'}
+                      </button>
+                    </div>
+                  </div>
+                  {expandedDeploymentId === dep.id ? (
+                    <pre className="mt-2 max-h-40 overflow-auto rounded border border-zinc-800 bg-black/40 p-2 text-[11px] text-zinc-300">
+                      {dep.logs?.length ? dep.logs.join('\n') : '(sin logs)'}
+                    </pre>
+                  ) : null}
                 </li>
               ))}
               {deployments.length === 0 ? (
@@ -217,6 +287,18 @@ export function ProjectPanel({ project, open, activeTab, onChangeTab, onClose }:
             >
               Guardar .env
             </button>
+            <div className="rounded border border-zinc-800 bg-zinc-950/70 p-2 text-xs">
+              <p className="mb-1 text-zinc-400">Diff con .env.example</p>
+              {envDiffSummary.length > 0 ? (
+                <ul className="list-disc pl-4 text-amber-300">
+                  {envDiffSummary.map((key) => (
+                    <li key={key}>{key}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-zinc-500">Sin variables faltantes detectadas.</p>
+              )}
+            </div>
           </div>
         ) : null}
 
@@ -243,6 +325,48 @@ export function ProjectPanel({ project, open, activeTab, onChangeTab, onClose }:
           <div className="space-y-3">
             <p>Repo: {project.githubUrl}</p>
             <p>Rama: {project.branch}</p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                className="rounded border border-zinc-700 px-3 py-1.5 text-xs hover:bg-zinc-800 disabled:opacity-50"
+                disabled={restartMutation.isPending}
+                onClick={() => restartMutation.mutate()}
+              >
+                Docker restart
+              </button>
+              <button
+                type="button"
+                className="rounded border border-zinc-700 px-3 py-1.5 text-xs hover:bg-zinc-800 disabled:opacity-50"
+                disabled={rebuildMutation.isPending}
+                onClick={() => rebuildMutation.mutate()}
+              >
+                Docker rebuild
+              </button>
+            </div>
+            <div className="rounded border border-zinc-800 bg-zinc-950/70 p-3">
+              <p className="mb-2 text-xs text-zinc-400">Scripts</p>
+              <div className="flex gap-2">
+                <input
+                  className="w-full rounded border border-zinc-700 bg-zinc-900 px-2 py-1.5 text-xs"
+                  value={scriptPath}
+                  onChange={(event) => setScriptPath(event.target.value)}
+                  placeholder="scripts/deploy.sh"
+                />
+                <button
+                  type="button"
+                  className="rounded bg-violet-600 px-3 py-1.5 text-xs text-white hover:bg-violet-500 disabled:opacity-50"
+                  disabled={runScriptMutation.isPending || scriptPath.trim().length === 0}
+                  onClick={() => runScriptMutation.mutate(scriptPath.trim())}
+                >
+                  Run
+                </button>
+              </div>
+              {scriptOutput ? (
+                <pre className="mt-2 max-h-36 overflow-auto rounded border border-zinc-800 bg-black/40 p-2 text-[11px] text-zinc-300">
+                  {scriptOutput}
+                </pre>
+              ) : null}
+            </div>
             <div className="rounded border border-red-900/60 bg-red-950/20 p-3 text-xs text-red-300">
               Zona Danger: eliminar proyecto y acciones avanzadas en siguiente iteracion.
             </div>
@@ -251,6 +375,20 @@ export function ProjectPanel({ project, open, activeTab, onChangeTab, onClose }:
       </div>
     </aside>
   )
+}
+
+function computeMissingEnvKeys(exampleContent: string, envContent: string): string[] {
+  const exampleKeys = extractEnvKeys(exampleContent)
+  const envKeys = new Set(extractEnvKeys(envContent))
+  return exampleKeys.filter((key) => !envKeys.has(key))
+}
+
+function extractEnvKeys(content: string): string[] {
+  return content
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0 && !line.startsWith('#') && line.includes('='))
+    .map((line) => line.split('=')[0].trim())
 }
 
 function formatBytes(bytes?: number): string {
