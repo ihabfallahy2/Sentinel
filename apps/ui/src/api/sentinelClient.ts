@@ -306,6 +306,155 @@ export async function fetchSystemStats(): Promise<unknown> {
   return res.json()
 }
 
+export async function fetchSystemMetrics(): Promise<{
+  cpu: { percent: number; cores: number }
+  ram: { used_gb: number; total_gb: number; percent: number }
+  disk: { used_gb: number; total_gb: number; percent: number }
+  uptime: { seconds: number; human: string }
+}> {
+  const res = await fetch(`${API_BASE}/api/system/metrics`, { headers: authHeaders() })
+  if (!res.ok) throw new Error(`system metrics: ${res.status}`)
+  return res.json()
+}
+
+export async function fetchSystemServices(): Promise<{
+  services: Array<{ name: string; status: string; level: 'ok' | 'warn' | 'err'; note?: string }>
+  source?: 'real' | 'fallback'
+  source_reason?: string
+}> {
+  const res = await fetch(`${API_BASE}/api/system/services`, { headers: authHeaders() })
+  if (!res.ok) throw new Error(`system services: ${res.status}`)
+  return res.json()
+}
+
+export async function fetchSystemNetwork(): Promise<{
+  public_ip: string
+  dns_latency_ms: number
+  active_connections: number
+  open_ports: number[]
+  rx_today_gb: number
+  tx_today_gb: number
+  source?: 'real' | 'fallback'
+  source_reason?: string
+}> {
+  const res = await fetch(`${API_BASE}/api/system/network`, { headers: authHeaders() })
+  if (!res.ok) throw new Error(`system network: ${res.status}`)
+  return res.json()
+}
+
+export async function fetchSystemCpuHistory(): Promise<{
+  labels: string[]
+  values: number[]
+  source?: 'real' | 'fallback'
+  source_reason?: string
+}> {
+  const res = await fetch(`${API_BASE}/api/system/cpu-history`, { headers: authHeaders() })
+  if (!res.ok) throw new Error(`cpu history: ${res.status}`)
+  return res.json()
+}
+
+export async function fetchSystemDiskDirs(): Promise<{
+  dirs: Array<{ path: string; size_gb: number; percent: number }>
+  source?: 'real' | 'fallback'
+  source_reason?: string
+}> {
+  const res = await fetch(`${API_BASE}/api/system/disk-dirs`, { headers: authHeaders() })
+  if (!res.ok) throw new Error(`disk dirs: ${res.status}`)
+  return res.json()
+}
+
+export async function fetchMaintenanceRuns(): Promise<{
+  runs: Array<{
+    id: string
+    started_at: string
+    duration_seconds: number
+    tasks_total: number
+    tasks_ok: number
+    status: 'ok' | 'warn' | 'err'
+    backup_file: string
+  }>
+  source?: 'real' | 'fallback'
+  source_reason?: string
+}> {
+  const res = await fetch(`${API_BASE}/api/maintenance/runs`, { headers: authHeaders() })
+  if (!res.ok) throw new Error(`maintenance runs: ${res.status}`)
+  return res.json()
+}
+
+export async function fetchMaintenanceStatus(): Promise<{
+  running: boolean
+  current_run_id: string | null
+  last_started_at: string | null
+  last_finished_at: string | null
+  last_exit_code: number | null
+}> {
+  const res = await fetch(`${API_BASE}/api/maintenance/status`, { headers: authHeaders() })
+  if (!res.ok) throw new Error(`maintenance status: ${res.status}`)
+  return res.json()
+}
+
+export async function runMaintenanceNow(): Promise<{
+  run_id: string
+  message: string
+  started_at: string
+}> {
+  const res = await fetch(`${API_BASE}/api/maintenance/run`, {
+    method: 'POST',
+    headers: authHeaders(),
+  })
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string; message?: string }
+    throw new Error(err.message ?? err.error ?? `maintenance run: ${res.status}`)
+  }
+  return res.json()
+}
+
+export async function fetchSystemLogs(
+  level: 'all' | 'err' | 'warn' | 'ok' | 'info' = 'all',
+): Promise<{
+  logs: Array<{ time: string; level: 'ok' | 'warn' | 'err' | 'info'; message: string }>
+  source?: 'real' | 'fallback'
+  source_reason?: string
+}> {
+  const qs = new URLSearchParams({ level })
+  const res = await fetch(`${API_BASE}/api/logs?${qs.toString()}`, { headers: authHeaders() })
+  if (!res.ok) throw new Error(`logs: ${res.status}`)
+  return res.json()
+}
+
+export async function fetchSecurityStatus(): Promise<{
+  security_updates_pending: number
+  fail2ban_blocked_ips: number
+  sudo_users_count: number
+  unexpected_suid_files: string[]
+  ufw_active: boolean
+  disks: Array<{
+    device: string
+    capacity: string
+    type: string
+    smart_status: string
+    wear_percent: number | null
+    temperature_c: number | null
+  }>
+  source?: 'real' | 'fallback'
+  source_reason?: string
+}> {
+  const res = await fetch(`${API_BASE}/api/security/status`, { headers: authHeaders() })
+  if (!res.ok) throw new Error(`security status: ${res.status}`)
+  return res.json()
+}
+
+export async function fetchSshAttempts(): Promise<{
+  labels: string[]
+  values: number[]
+  source?: 'real' | 'fallback'
+  source_reason?: string
+}> {
+  const res = await fetch(`${API_BASE}/api/security/ssh-attempts`, { headers: authHeaders() })
+  if (!res.ok) throw new Error(`ssh attempts: ${res.status}`)
+  return res.json()
+}
+
 export async function fetchGithubRepos(): Promise<
   Array<{ name: string; fullName: string; cloneUrl: string; defaultBranch: string }>
 > {
