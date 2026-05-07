@@ -193,7 +193,7 @@ export function readMaintenanceStatus(): {
 export async function readSystemLogs(
   level: 'all' | 'err' | 'warn' | 'ok' | 'info',
   limit: number,
-): Promise<{ logs: LogItem[]; source: DataSource }> {
+): Promise<{ logs: LogItem[]; source: DataSource; source_reason?: string }> {
   const fallback: LogItem[] = [
     { time: '02:03:41', level: 'ok', message: 'Mantenimiento completado sin errores críticos' },
     { time: '02:01:10', level: 'warn', message: 'Redis en alto uso de memoria' },
