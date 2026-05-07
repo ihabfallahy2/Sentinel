@@ -96,10 +96,9 @@ tasks_ok=$((tasks_ok+1))
 # ── 4. SERVICIOS VIA DOCKER SOCKET ────────────────────────────
 log "[4/7] Verificando contenedores Docker..."
 svc_ok=0; svc_warn=0
-if [ -S "$DOCKER_SOCK" ] && command -v wget >/dev/null 2>&1; then
+if [ -S "$DOCKER_SOCK" ] && command -v curl >/dev/null 2>&1; then
   # Listar contenedores via Docker socket (sin docker CLI)
-  containers=$(wget -q -O- \
-    --unix-socket "$DOCKER_SOCK" \
+  containers=$(curl -sf --unix-socket "$DOCKER_SOCK" \
     "http://localhost/containers/json?all=true" 2>/dev/null || echo "[]")
 
   if [ -n "$containers" ] && [ "$containers" != "[]" ]; then
@@ -126,7 +125,7 @@ if [ -S "$DOCKER_SOCK" ] && command -v wget >/dev/null 2>&1; then
     add_note "Docker socket no respondió"
   fi
 else
-  log "[WARN] Docker socket no disponible o wget no encontrado"
+  log "[WARN] Docker socket no disponible o curl no encontrado"
   add_note "Docker socket no accesible"
   status="warn"
 fi
