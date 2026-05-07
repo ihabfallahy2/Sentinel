@@ -71,7 +71,7 @@ export function SystemPage() {
   const { data: maintenanceStatus } = useQuery({
     queryKey: ['maintenance-status-v2'],
     queryFn: fetchMaintenanceStatus,
-    refetchInterval: pendingRunId ? 3_000 : 10_000,
+    refetchInterval: 10_000,
   })
   const { data: logs, refetch: refetchLogs, isFetching: loadingLogs } = useQuery({
     queryKey: ['system-logs-v2', logFilter],
