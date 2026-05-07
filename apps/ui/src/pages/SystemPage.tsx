@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   BarElement,
   CategoryScale,
@@ -14,6 +14,7 @@ import {
   type ChartOptions,
 } from 'chart.js'
 import { Bar, Line } from 'react-chartjs-2'
+import { toast } from 'sonner'
 import {
   fetchMaintenanceRuns,
   fetchSecurityStatus,
@@ -36,6 +37,7 @@ export function SystemPage() {
   const qc = useQueryClient()
   const [activeTab, setActiveTab] = useState<TabId>('resumen')
   const [logFilter, setLogFilter] = useState<LogLevelFilter>('all')
+  const [pendingRunId, setPendingRunId] = useState<string | null>(null)
 
   const { data: metrics } = useQuery({
     queryKey: ['system-metrics-v2'],
@@ -65,7 +67,8 @@ export function SystemPage() {
   const { data: runs } = useQuery({
     queryKey: ['maintenance-runs-v2'],
     queryFn: fetchMaintenanceRuns,
-    enabled: activeTab === 'ejecuciones',
+    enabled: activeTab === 'ejecuciones' || Boolean(pendingRunId),
+    refetchInterval: pendingRunId ? 5_000 : false,
   })
   const { data: logs, refetch: refetchLogs, isFetching: loadingLogs } = useQuery({
     queryKey: ['system-logs-v2', logFilter],
@@ -85,11 +88,32 @@ export function SystemPage() {
 
   const runNow = useMutation({
     mutationFn: runMaintenanceNow,
-    onSuccess: async () => {
+    onSuccess: async (result) => {
+      setPendingRunId(result.run_id)
+      setActiveTab('ejecuciones')
+      toast.info('Mantenimiento en curso…')
       await qc.invalidateQueries({ queryKey: ['maintenance-runs-v2'] })
       await qc.invalidateQueries({ queryKey: ['system-logs-v2'] })
     },
+    onError: (error: Error) => {
+      toast.error(`No se pudo lanzar mantenimiento: ${error.message}`)
+    },
   })
+
+  useEffect(() => {
+    if (!pendingRunId || !runs?.runs?.length) return
+    const doneRun = runs.runs.find((r) => r.id === pendingRunId)
+    if (!doneRun) return
+    setPendingRunId(null)
+    if (doneRun.status === 'ok') {
+      toast.success('Mantenimiento completado')
+    } else if (doneRun.status === 'warn') {
+      toast.warning('Mantenimiento completado con advertencias')
+    } else {
+      toast.error('Mantenimiento finalizó con errores')
+    }
+    void qc.invalidateQueries({ queryKey: ['system-logs-v2'] })
+  }, [pendingRunId, runs?.runs, qc])
 
   const lastRun = useMemo(() => runs?.runs?.[0]?.started_at ?? null, [runs?.runs])
 
