@@ -1,5 +1,5 @@
 FROM node:20-alpine AS base
-RUN apk add --no-cache git
+RUN apk add --no-cache git util-linux
 RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
 WORKDIR /app
 

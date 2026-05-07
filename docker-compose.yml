@@ -9,11 +9,21 @@ services:
       - ./data:/app/data
       - sentinel-projects:/opt/sentinel/projects
       - /var/run/docker.sock:/var/run/docker.sock
+      # Host visibility for System dashboard real probes/logs.
+      - /var/log:/var/log:ro
+      - /var/cache:/var/cache:ro
+      - /etc:/etc:ro
+      - /run:/run:ro
     environment:
       SENTINEL_API_KEY: ${SENTINEL_API_KEY:-cambia_esto}
       SENTINEL_PORT: "3500"
       SENTINEL_DATA_DIR: /app/data
       SENTINEL_PROJECTS_DIR: /opt/sentinel/projects
+      # Enable host namespace execution for system probes.
+      SENTINEL_USE_HOST_NSENTER: ${SENTINEL_USE_HOST_NSENTER:-true}
+      # Point to your host maintenance script path if needed.
+      SENTINEL_MAINTENANCE_SCRIPT: ${SENTINEL_MAINTENANCE_SCRIPT:-}
+    privileged: true
     restart: unless-stopped
 
   sentinel-ui:

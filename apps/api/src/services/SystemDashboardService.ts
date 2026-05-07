@@ -20,6 +20,8 @@ const LOG_FILE = process.env.SENTINEL_MAINTENANCE_LOG ?? '/var/log/mantenimiento
 const CPU_HISTORY_FILE = process.env.SENTINEL_CPU_HISTORY_FILE ?? '/var/cache/sentinel/cpu_history.jsonl'
 const DISK_DIRS_CACHE = process.env.SENTINEL_DISK_DIRS_CACHE ?? '/var/cache/sentinel/disk_dirs.json'
 const MAINTENANCE_SCRIPT = process.env.SENTINEL_MAINTENANCE_SCRIPT ?? ''
+const USE_HOST_NSENTER =
+  process.env.SENTINEL_USE_HOST_NSENTER === '1' || process.env.SENTINEL_USE_HOST_NSENTER === 'true'
 const MONITORED_SERVICES =
   process.env.SENTINEL_MONITORED_SERVICES?.split(',').map((s) => s.trim()).filter(Boolean) ?? [
     'nginx',
@@ -66,7 +68,11 @@ function runShell(
   timeoutMs = 8000,
 ): Promise<{ code: number; stdout: string; stderr: string }> {
   return new Promise((resolve) => {
-    const child = spawn(command, args, { stdio: ['ignore', 'pipe', 'pipe'] })
+    const child = USE_HOST_NSENTER
+      ? spawn('nsenter', ['-t', '1', '-m', '-u', '-i', '-n', '-p', '--', command, ...args], {
+          stdio: ['ignore', 'pipe', 'pipe'],
+        })
+      : spawn(command, args, { stdio: ['ignore', 'pipe', 'pipe'] })
     let stdout = ''
     let stderr = ''
     const timer = setTimeout(() => {
@@ -154,10 +160,15 @@ export async function triggerMaintenanceRun(): Promise<{
   maintenanceState.lastStartedAt = startedAt
   maintenanceState.lastExitCode = null
 
-  const child = spawn('bash', [MAINTENANCE_SCRIPT], {
-    detached: false,
-    stdio: 'ignore',
-  })
+  const child = USE_HOST_NSENTER
+    ? spawn('nsenter', ['-t', '1', '-m', '-u', '-i', '-n', '-p', '--', 'bash', MAINTENANCE_SCRIPT], {
+        detached: false,
+        stdio: 'ignore',
+      })
+    : spawn('bash', [MAINTENANCE_SCRIPT], {
+        detached: false,
+        stdio: 'ignore',
+      })
   child.on('close', (code) => {
     maintenanceState.running = false
     maintenanceState.lastFinishedAt = new Date().toISOString()
