@@ -486,6 +486,7 @@ function ProjectCanvas({ boardId }: { boardId: string }) {
           onNodeContextMenu={onNodeContextMenu}
           onNodeClick={onNodeClick}
           fitView
+          fitViewOptions={{ maxZoom: 1 }}
         >
           <Background gap={20} size={1} variant={BackgroundVariant.Dots} />
           <Controls />
