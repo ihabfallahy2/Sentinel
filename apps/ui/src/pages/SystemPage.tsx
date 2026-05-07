@@ -500,8 +500,8 @@ function logBgClass(level: 'ok' | 'warn' | 'err' | 'info'): string {
 }
 
 function SourceBadge({ source, reason }: { source?: 'real' | 'fallback'; reason?: string }) {
-  if (!source) return null
   const [openReason, setOpenReason] = useState(false)
+  if (!source) return null
   const canShowReason = source === 'fallback' && Boolean(reason)
 
   return (
