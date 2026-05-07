@@ -1,20 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useMemo, useState } from 'react'
-import {
-  BarElement,
-  CategoryScale,
-  Chart as ChartJS,
-  Filler,
-  Legend,
-  LinearScale,
-  LineElement,
-  PointElement,
-  Tooltip,
-  type ChartData,
-  type ChartOptions,
-} from 'chart.js'
-import { Bar, Line } from 'react-chartjs-2'
-import { toast } from 'sonner'
+import { useMemo, useState } from 'react'
 import {
   fetchMaintenanceRuns,
   fetchSecurityStatus,
@@ -31,13 +16,10 @@ import {
 type TabId = 'resumen' | 'ejecuciones' | 'logs' | 'seguridad'
 type LogLevelFilter = 'all' | 'err' | 'warn' | 'ok' | 'info'
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Tooltip, Legend, Filler)
-
 export function SystemPage() {
   const qc = useQueryClient()
   const [activeTab, setActiveTab] = useState<TabId>('resumen')
   const [logFilter, setLogFilter] = useState<LogLevelFilter>('all')
-  const [pendingRunId, setPendingRunId] = useState<string | null>(null)
 
   const { data: metrics } = useQuery({
     queryKey: ['system-metrics-v2'],
@@ -67,8 +49,7 @@ export function SystemPage() {
   const { data: runs } = useQuery({
     queryKey: ['maintenance-runs-v2'],
     queryFn: fetchMaintenanceRuns,
-    enabled: activeTab === 'ejecuciones' || Boolean(pendingRunId),
-    refetchInterval: pendingRunId ? 5_000 : false,
+    enabled: activeTab === 'ejecuciones',
   })
   const { data: logs, refetch: refetchLogs, isFetching: loadingLogs } = useQuery({
     queryKey: ['system-logs-v2', logFilter],
@@ -88,45 +69,21 @@ export function SystemPage() {
 
   const runNow = useMutation({
     mutationFn: runMaintenanceNow,
-    onSuccess: async (result) => {
-      setPendingRunId(result.run_id)
-      setActiveTab('ejecuciones')
-      toast.info('Mantenimiento en curso…')
+    onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: ['maintenance-runs-v2'] })
       await qc.invalidateQueries({ queryKey: ['system-logs-v2'] })
     },
-    onError: (error: Error) => {
-      toast.error(`No se pudo lanzar mantenimiento: ${error.message}`)
-    },
   })
-
-  useEffect(() => {
-    if (!pendingRunId || !runs?.runs?.length) return
-    const doneRun = runs.runs.find((r) => r.id === pendingRunId)
-    if (!doneRun) return
-    setPendingRunId(null)
-    if (doneRun.status === 'ok') {
-      toast.success('Mantenimiento completado')
-    } else if (doneRun.status === 'warn') {
-      toast.warning('Mantenimiento completado con advertencias')
-    } else {
-      toast.error('Mantenimiento finalizó con errores')
-    }
-    void qc.invalidateQueries({ queryKey: ['system-logs-v2'] })
-  }, [pendingRunId, runs?.runs, qc])
 
   const lastRun = useMemo(() => runs?.runs?.[0]?.started_at ?? null, [runs?.runs])
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-4">
-      <header className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-zinc-800 bg-zinc-900/30 p-4 shadow-[0_8px_24px_rgba(0,0,0,0.25)]">
+      <header className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-zinc-800 bg-zinc-900/30 p-4">
         <div className="space-y-1">
           <h1 className="text-lg font-semibold text-zinc-100">Sistema</h1>
           <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-500">
-            <span className="inline-flex items-center gap-1 rounded bg-emerald-950/40 px-2 py-0.5 text-emerald-300">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-              estable
-            </span>
+            <span className="rounded bg-emerald-950/40 px-2 py-0.5 text-emerald-300">estable</span>
             <span>Última ejecución: {lastRun ? new Date(lastRun).toLocaleString() : 'n/a'}</span>
           </div>
         </div>
@@ -134,7 +91,7 @@ export function SystemPage() {
           type="button"
           onClick={() => runNow.mutate()}
           disabled={runNow.isPending}
-          className="rounded bg-violet-600 px-3 py-2 text-xs font-medium text-white transition hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded bg-violet-600 px-3 py-2 text-xs font-medium text-white hover:bg-violet-500 disabled:opacity-50"
         >
           {runNow.isPending ? 'Ejecutando…' : 'Run now'}
         </button>
@@ -175,8 +132,8 @@ export function SystemPage() {
             onClick={() => setActiveTab(tab)}
             className={
               activeTab === tab
-                ? 'rounded bg-violet-600 px-3 py-1.5 text-xs font-medium text-white shadow'
-                : 'rounded px-3 py-1.5 text-xs text-zinc-300 transition hover:bg-zinc-800'
+                ? 'rounded bg-violet-600 px-3 py-1.5 text-xs font-medium text-white'
+                : 'rounded px-3 py-1.5 text-xs text-zinc-300 hover:bg-zinc-800'
             }
           >
             {tab[0].toUpperCase() + tab.slice(1)}
@@ -187,14 +144,11 @@ export function SystemPage() {
       {activeTab === 'resumen' ? (
         <div className="space-y-3">
           <div className="grid gap-3 xl:grid-cols-2">
-            <section className="rounded-xl border border-zinc-800 bg-zinc-900/30 p-4 shadow-[0_8px_24px_rgba(0,0,0,0.2)]">
+            <section className="rounded-xl border border-zinc-800 bg-zinc-900/30 p-4">
               <h2 className="mb-3 text-xs font-medium uppercase tracking-wide text-zinc-500">Servicios</h2>
               <div className="space-y-2 text-sm">
                 {services?.services?.map((service) => (
-                  <div
-                    key={service.name}
-                    className="flex items-center justify-between rounded border border-transparent px-1 py-1 transition hover:border-zinc-800 hover:bg-zinc-950/40"
-                  >
+                  <div key={service.name} className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className={`h-2 w-2 rounded-full ${dotClass(service.level)}`} />
                       <span className="text-zinc-200">{service.name}</span>
@@ -207,16 +161,16 @@ export function SystemPage() {
               </div>
             </section>
 
-            <section className="rounded-xl border border-zinc-800 bg-zinc-900/30 p-4 shadow-[0_8px_24px_rgba(0,0,0,0.2)]">
+            <section className="rounded-xl border border-zinc-800 bg-zinc-900/30 p-4">
               <h2 className="mb-3 text-xs font-medium uppercase tracking-wide text-zinc-500">
                 CPU últimas 12h
               </h2>
-              <CpuHistoryChart labels={cpuHistory?.labels ?? []} values={cpuHistory?.values ?? []} />
+              <MiniBars values={cpuHistory?.values ?? []} />
             </section>
           </div>
 
           <div className="grid gap-3 xl:grid-cols-2">
-            <section className="rounded-xl border border-zinc-800 bg-zinc-900/30 p-4 shadow-[0_8px_24px_rgba(0,0,0,0.2)]">
+            <section className="rounded-xl border border-zinc-800 bg-zinc-900/30 p-4">
               <h2 className="mb-3 text-xs font-medium uppercase tracking-wide text-zinc-500">Top dirs</h2>
               <div className="space-y-2">
                 {diskDirs?.dirs?.map((dir) => (
@@ -233,7 +187,7 @@ export function SystemPage() {
               </div>
             </section>
 
-            <section className="rounded-xl border border-zinc-800 bg-zinc-900/30 p-4 shadow-[0_8px_24px_rgba(0,0,0,0.2)]">
+            <section className="rounded-xl border border-zinc-800 bg-zinc-900/30 p-4">
               <h2 className="mb-3 text-xs font-medium uppercase tracking-wide text-zinc-500">Red</h2>
               <KeyRow label="Public IP" value={network?.public_ip ?? 'n/a'} mono />
               <KeyRow label="DNS latency" value={`${network?.dns_latency_ms ?? 'n/a'} ms`} />
@@ -249,7 +203,7 @@ export function SystemPage() {
       ) : null}
 
       {activeTab === 'ejecuciones' ? (
-        <section className="rounded-xl border border-zinc-800 bg-zinc-900/30 p-4 shadow-[0_8px_24px_rgba(0,0,0,0.2)]">
+        <section className="rounded-xl border border-zinc-800 bg-zinc-900/30 p-4">
           <h2 className="mb-3 text-xs font-medium uppercase tracking-wide text-zinc-500">Ejecuciones</h2>
           <div className="space-y-2">
             {runs?.runs?.map((run) => (
@@ -273,7 +227,7 @@ export function SystemPage() {
       ) : null}
 
       {activeTab === 'logs' ? (
-        <section className="rounded-xl border border-zinc-800 bg-zinc-900/30 p-4 shadow-[0_8px_24px_rgba(0,0,0,0.2)]">
+        <section className="rounded-xl border border-zinc-800 bg-zinc-900/30 p-4">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-xs font-medium uppercase tracking-wide text-zinc-500">Logs</h2>
             <div className="flex gap-2">
@@ -290,7 +244,7 @@ export function SystemPage() {
               </select>
               <button
                 type="button"
-                className="rounded border border-zinc-700 px-2 py-1 text-xs transition hover:bg-zinc-800"
+                className="rounded border border-zinc-700 px-2 py-1 text-xs hover:bg-zinc-800"
                 onClick={() => void refetchLogs()}
               >
                 {loadingLogs ? 'Refreshing…' : 'Refresh'}
@@ -299,10 +253,7 @@ export function SystemPage() {
           </div>
           <div className="max-h-80 space-y-1 overflow-auto">
             {logs?.logs?.map((log, index) => (
-              <div
-                key={`${log.time}-${index}`}
-                className={`rounded border border-transparent px-2 py-1 text-xs transition hover:border-zinc-700 ${logBgClass(log.level)}`}
-              >
+              <div key={`${log.time}-${index}`} className={`rounded px-2 py-1 text-xs ${logBgClass(log.level)}`}>
                 <span className="mr-2 font-mono text-zinc-500">{log.time}</span>
                 <span className="mr-2">{log.level.toUpperCase()}</span>
                 <span className="text-zinc-200">{log.message}</span>
@@ -315,7 +266,7 @@ export function SystemPage() {
       {activeTab === 'seguridad' ? (
         <div className="space-y-3">
           <div className="grid gap-3 xl:grid-cols-2">
-            <section className="rounded-xl border border-zinc-800 bg-zinc-900/30 p-4 shadow-[0_8px_24px_rgba(0,0,0,0.2)]">
+            <section className="rounded-xl border border-zinc-800 bg-zinc-900/30 p-4">
               <h2 className="mb-3 text-xs font-medium uppercase tracking-wide text-zinc-500">
                 Estado de seguridad
               </h2>
@@ -329,15 +280,15 @@ export function SystemPage() {
               <KeyRow label="UFW" value={security?.ufw_active ? 'active' : 'inactive'} />
             </section>
 
-            <section className="rounded-xl border border-zinc-800 bg-zinc-900/30 p-4 shadow-[0_8px_24px_rgba(0,0,0,0.2)]">
+            <section className="rounded-xl border border-zinc-800 bg-zinc-900/30 p-4">
               <h2 className="mb-3 text-xs font-medium uppercase tracking-wide text-zinc-500">
                 Intentos SSH (24h)
               </h2>
-              <SshAttemptsChart labels={sshAttempts?.labels ?? []} values={sshAttempts?.values ?? []} />
+              <MiniBars values={sshAttempts?.values ?? []} danger />
             </section>
           </div>
 
-          <section className="rounded-xl border border-zinc-800 bg-zinc-900/30 p-4 shadow-[0_8px_24px_rgba(0,0,0,0.2)]">
+          <section className="rounded-xl border border-zinc-800 bg-zinc-900/30 p-4">
             <h2 className="mb-3 text-xs font-medium uppercase tracking-wide text-zinc-500">S.M.A.R.T.</h2>
             <div className="space-y-2">
               {security?.disks?.map((disk) => (
@@ -371,7 +322,7 @@ function MetricCard(props: { label: string; value: string; subtitle: string; per
   const clamped = Math.max(0, Math.min(100, percent))
   const barColor = clamped > 85 ? 'bg-red-500' : clamped > 70 ? 'bg-amber-400' : 'bg-emerald-500'
   return (
-    <article className="rounded-xl border border-zinc-800 bg-zinc-900/30 p-4 shadow-[0_8px_24px_rgba(0,0,0,0.2)] transition hover:-translate-y-0.5 hover:border-zinc-700">
+    <article className="rounded-xl border border-zinc-800 bg-zinc-900/30 p-4">
       <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">{label}</p>
       <p className="mt-2 text-2xl font-medium text-zinc-100">{value}</p>
       <div className="mt-2 h-1.5 rounded bg-zinc-800">
@@ -404,73 +355,6 @@ function MiniBars({ values, danger = false }: { values: number[]; danger?: boole
           title={`${value}`}
         />
       ))}
-    </div>
-  )
-}
-
-function CpuHistoryChart({ labels, values }: { labels: string[]; values: number[] }) {
-  const data: ChartData<'line'> = {
-    labels,
-    datasets: [
-      {
-        label: 'CPU %',
-        data: values,
-        borderColor: 'rgba(167, 139, 250, 0.9)',
-        backgroundColor: 'rgba(167, 139, 250, 0.12)',
-        fill: true,
-        tension: 0.3,
-        pointRadius: 2,
-      },
-    ],
-  }
-  const options: ChartOptions<'line'> = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: { legend: { display: false } },
-    scales: {
-      y: {
-        min: 0,
-        max: 100,
-        ticks: { callback: (v) => `${v}%`, color: '#71717a', font: { size: 10 } },
-        grid: { color: 'rgba(63,63,70,0.5)' },
-      },
-      x: {
-        ticks: { color: '#71717a', font: { size: 10 } },
-        grid: { display: false },
-      },
-    },
-  }
-  return (
-    <div className="h-40 rounded border border-zinc-800 bg-zinc-950/50 p-2">
-      <Line data={data} options={options} />
-    </div>
-  )
-}
-
-function SshAttemptsChart({ labels, values }: { labels: string[]; values: number[] }) {
-  const data: ChartData<'bar'> = {
-    labels,
-    datasets: [{ label: 'SSH fails', data: values, backgroundColor: 'rgba(239, 68, 68, 0.7)' }],
-  }
-  const options: ChartOptions<'bar'> = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: { legend: { display: false } },
-    scales: {
-      y: {
-        beginAtZero: true,
-        ticks: { color: '#71717a', font: { size: 10 } },
-        grid: { color: 'rgba(63,63,70,0.5)' },
-      },
-      x: {
-        ticks: { color: '#71717a', font: { size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 12 },
-        grid: { display: false },
-      },
-    },
-  }
-  return (
-    <div className="h-40 rounded border border-zinc-800 bg-zinc-950/50 p-2">
-      <Bar data={data} options={options} />
     </div>
   )
 }
