@@ -14,6 +14,7 @@ import {
   type ChartOptions,
 } from 'chart.js'
 import { Bar, Line } from 'react-chartjs-2'
+import { toast } from 'sonner'
 import {
   fetchMaintenanceStatus,
   fetchMaintenanceRuns,
@@ -92,8 +93,13 @@ export function SystemPage() {
   const runNow = useMutation({
     mutationFn: runMaintenanceNow,
     onSuccess: async () => {
+      toast.success('Mantenimiento lanzado')
       await qc.invalidateQueries({ queryKey: ['maintenance-runs-v2'] })
       await qc.invalidateQueries({ queryKey: ['system-logs-v2'] })
+      await qc.invalidateQueries({ queryKey: ['maintenance-status-v2'] })
+    },
+    onError: (error: Error) => {
+      toast.error(`No se pudo lanzar mantenimiento: ${error.message}`)
     },
   })
 
