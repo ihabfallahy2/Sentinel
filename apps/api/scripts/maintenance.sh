@@ -55,27 +55,28 @@ else
   tasks_ok=$((tasks_ok+1))
 fi
 
-# Cache top directorios
+# Cache top particiones via df -P (POSIX: sin wrap de líneas)
 log "  Calculando top de directorios..."
-raw=$(du -hx --max-depth=2 / 2>/dev/null | sort -rh | head -8 || true)
-if [ -n "$raw" ]; then
-  printf '%s\n' "$raw" | awk '
-  BEGIN { print "["; first=1 }
-  {
-    val=$1; path=$2
-    size=0
-    if (val ~ /G$/) { sub(/G$/,"",val); size=val+0 }
-    else if (val ~ /M$/) { sub(/M$/,"",val); size=val/1024 }
-    else if (val ~ /K$/) { sub(/K$/,"",val); size=val/1024/1024 }
-    if (!first) printf ","
-    printf "\n  {\"path\":\"%s\",\"size_gb\":%.1f}", path, size
-    first=0
+df -Ph 2>/dev/null | awk '
+BEGIN { print "["; first=1 }
+NR==1 { next }
+{
+  fs=$1; size=$2; used=$3; pct=$5; mnt=$6
+  gsub(/%/,"",pct)
+  # Solo overlay y /dev/mapper (ignorar tmpfs y duplicados)
+  if (fs !~ /^(tmpfs|shm|Filesystem)/ && seen[fs]++ == 0) {
+    if (size ~ /G$/) { sub(/G$/,"",size); size_gb=size+0 }
+    else if (size ~ /M$/) { sub(/M$/,"",size); size_gb=size/1024 }
+    else { size_gb=0 }
+    if (size_gb > 0) {
+      if (!first) printf ","
+      printf "\n  {\"path\":\"%s\",\"size_gb\":%.1f,\"percent\":%s}", mnt, size_gb, pct+0
+      first=0
+    }
   }
-  END { print "\n]" }' > "$DISK_DIRS_CACHE"
-  log "[OK] Top dirs actualizado"
-else
-  log "[WARN] No se pudo calcular top de directorios"
-fi
+}
+END { print "\n]" }' > "$DISK_DIRS_CACHE"
+log "[OK] Top particiones actualizado"
 
 # ── 3. REVISAR LOGS DEL SISTEMA ───────────────────────────────
 log "[3/7] Revisando logs del sistema..."
@@ -125,7 +126,7 @@ if [ -S "$DOCKER_SOCK" ] && command -v curl >/dev/null 2>&1; then
     add_note "Docker socket no respondió"
   fi
 else
-  log "[WARN] Docker socket no disponible o curl no encontrado"
+  log "[WARN] Docker socket no disponible o wget no encontrado"
   add_note "Docker socket no accesible"
   status="warn"
 fi
