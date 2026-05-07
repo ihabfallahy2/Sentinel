@@ -12,6 +12,8 @@ RUN pnpm install --frozen-lockfile
 COPY packages/shared-types packages/shared-types
 COPY apps/api apps/api
 
+RUN chmod +x /app/apps/api/scripts/maintenance.sh
+
 RUN pnpm --filter @sentinel/shared-types build
 RUN pnpm --filter @sentinel/api build
 

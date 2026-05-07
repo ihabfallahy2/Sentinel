@@ -22,6 +22,9 @@ const DISK_DIRS_CACHE = process.env.SENTINEL_DISK_DIRS_CACHE ?? '/var/cache/sent
 const MAINTENANCE_SCRIPT = process.env.SENTINEL_MAINTENANCE_SCRIPT ?? ''
 const USE_HOST_NSENTER =
   process.env.SENTINEL_USE_HOST_NSENTER === '1' || process.env.SENTINEL_USE_HOST_NSENTER === 'true'
+const RUN_MAINTENANCE_IN_HOST =
+  process.env.SENTINEL_RUN_MAINTENANCE_IN_HOST === '1' ||
+  process.env.SENTINEL_RUN_MAINTENANCE_IN_HOST === 'true'
 const MONITORED_SERVICES =
   process.env.SENTINEL_MONITORED_SERVICES?.split(',').map((s) => s.trim()).filter(Boolean) ?? [
     'nginx',
@@ -160,7 +163,7 @@ export async function triggerMaintenanceRun(): Promise<{
   maintenanceState.lastStartedAt = startedAt
   maintenanceState.lastExitCode = null
 
-  const child = USE_HOST_NSENTER
+  const child = RUN_MAINTENANCE_IN_HOST && USE_HOST_NSENTER
     ? spawn('nsenter', ['-t', '1', '-m', '-u', '-i', '-n', '-p', '--', 'bash', MAINTENANCE_SCRIPT], {
         detached: false,
         stdio: 'ignore',

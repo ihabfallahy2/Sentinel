@@ -21,8 +21,10 @@ services:
       SENTINEL_PROJECTS_DIR: /opt/sentinel/projects
       # Enable host namespace execution for system probes.
       SENTINEL_USE_HOST_NSENTER: ${SENTINEL_USE_HOST_NSENTER:-true}
-      # Point to your host maintenance script path if needed.
-      SENTINEL_MAINTENANCE_SCRIPT: ${SENTINEL_MAINTENANCE_SCRIPT:-}
+      # By default run the bundled maintenance script inside API container.
+      SENTINEL_MAINTENANCE_SCRIPT: ${SENTINEL_MAINTENANCE_SCRIPT:-/app/apps/api/scripts/maintenance.sh}
+      # Optional: set true to run maintenance script in host namespace via nsenter.
+      SENTINEL_RUN_MAINTENANCE_IN_HOST: ${SENTINEL_RUN_MAINTENANCE_IN_HOST:-false}
     privileged: true
     restart: unless-stopped
 
