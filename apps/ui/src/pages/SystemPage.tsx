@@ -15,6 +15,7 @@ import {
 } from 'chart.js'
 import { Bar, Line } from 'react-chartjs-2'
 import {
+  fetchMaintenanceStatus,
   fetchMaintenanceRuns,
   fetchSecurityStatus,
   fetchSshAttempts,
@@ -67,6 +68,11 @@ export function SystemPage() {
     queryFn: fetchMaintenanceRuns,
     enabled: activeTab === 'ejecuciones',
   })
+  const { data: maintenanceStatus } = useQuery({
+    queryKey: ['maintenance-status-v2'],
+    queryFn: fetchMaintenanceStatus,
+    refetchInterval: pendingRunId ? 3_000 : 10_000,
+  })
   const { data: logs, refetch: refetchLogs, isFetching: loadingLogs } = useQuery({
     queryKey: ['system-logs-v2', logFilter],
     queryFn: () => fetchSystemLogs(logFilter),
@@ -102,6 +108,21 @@ export function SystemPage() {
             <span className="inline-flex items-center gap-1 rounded bg-emerald-950/40 px-2 py-0.5 text-emerald-300">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
               estable
+            </span>
+            <span
+              className={`inline-flex items-center gap-1 rounded px-2 py-0.5 ${
+                maintenanceStatus?.running
+                  ? 'bg-amber-950/40 text-amber-300'
+                  : maintenanceStatus?.last_exit_code && maintenanceStatus.last_exit_code !== 0
+                    ? 'bg-red-950/40 text-red-300'
+                    : 'bg-zinc-900 text-zinc-400'
+              }`}
+            >
+              {maintenanceStatus?.running
+                ? 'maintenance: running'
+                : maintenanceStatus?.last_exit_code && maintenanceStatus.last_exit_code !== 0
+                  ? `maintenance: error (${maintenanceStatus.last_exit_code})`
+                  : 'maintenance: idle'}
             </span>
             <span>Última ejecución: {lastRun ? new Date(lastRun).toLocaleString() : 'n/a'}</span>
           </div>
@@ -165,6 +186,7 @@ export function SystemPage() {
           <div className="grid gap-3 xl:grid-cols-2">
             <section className="rounded-xl border border-zinc-800 bg-zinc-900/30 p-4 shadow-[0_8px_24px_rgba(0,0,0,0.2)]">
               <h2 className="mb-3 text-xs font-medium uppercase tracking-wide text-zinc-500">Servicios</h2>
+              <SourceBadge source={services?.source} reason={services?.source_reason} />
               <div className="space-y-2 text-sm">
                 {services?.services?.map((service) => (
                   <div
@@ -187,6 +209,7 @@ export function SystemPage() {
               <h2 className="mb-3 text-xs font-medium uppercase tracking-wide text-zinc-500">
                 CPU últimas 12h
               </h2>
+              <SourceBadge source={cpuHistory?.source} reason={cpuHistory?.source_reason} />
               <CpuHistoryChart labels={cpuHistory?.labels ?? []} values={cpuHistory?.values ?? []} />
             </section>
           </div>
@@ -194,6 +217,7 @@ export function SystemPage() {
           <div className="grid gap-3 xl:grid-cols-2">
             <section className="rounded-xl border border-zinc-800 bg-zinc-900/30 p-4 shadow-[0_8px_24px_rgba(0,0,0,0.2)]">
               <h2 className="mb-3 text-xs font-medium uppercase tracking-wide text-zinc-500">Top dirs</h2>
+              <SourceBadge source={diskDirs?.source} reason={diskDirs?.source_reason} />
               <div className="space-y-2">
                 {diskDirs?.dirs?.map((dir) => (
                   <div key={dir.path} className="space-y-1">
@@ -211,6 +235,7 @@ export function SystemPage() {
 
             <section className="rounded-xl border border-zinc-800 bg-zinc-900/30 p-4 shadow-[0_8px_24px_rgba(0,0,0,0.2)]">
               <h2 className="mb-3 text-xs font-medium uppercase tracking-wide text-zinc-500">Red</h2>
+              <SourceBadge source={network?.source} reason={network?.source_reason} />
               <KeyRow label="Public IP" value={network?.public_ip ?? 'n/a'} mono />
               <KeyRow label="DNS latency" value={`${network?.dns_latency_ms ?? 'n/a'} ms`} />
               <KeyRow label="Active connections" value={String(network?.active_connections ?? 'n/a')} />
@@ -227,6 +252,7 @@ export function SystemPage() {
       {activeTab === 'ejecuciones' ? (
         <section className="rounded-xl border border-zinc-800 bg-zinc-900/30 p-4 shadow-[0_8px_24px_rgba(0,0,0,0.2)]">
           <h2 className="mb-3 text-xs font-medium uppercase tracking-wide text-zinc-500">Ejecuciones</h2>
+          <SourceBadge source={runs?.source} reason={runs?.source_reason} />
           <div className="space-y-2">
             {runs?.runs?.map((run) => (
               <div
@@ -252,6 +278,7 @@ export function SystemPage() {
         <section className="rounded-xl border border-zinc-800 bg-zinc-900/30 p-4 shadow-[0_8px_24px_rgba(0,0,0,0.2)]">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-xs font-medium uppercase tracking-wide text-zinc-500">Logs</h2>
+            <SourceBadge source={logs?.source} reason={logs?.source_reason} />
             <div className="flex gap-2">
               <select
                 className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-xs"
@@ -295,6 +322,7 @@ export function SystemPage() {
               <h2 className="mb-3 text-xs font-medium uppercase tracking-wide text-zinc-500">
                 Estado de seguridad
               </h2>
+              <SourceBadge source={security?.source} reason={security?.source_reason} />
               <KeyRow label="Security updates" value={String(security?.security_updates_pending ?? 'n/a')} />
               <KeyRow label="Fail2ban blocked" value={String(security?.fail2ban_blocked_ips ?? 'n/a')} />
               <KeyRow label="Sudo users" value={String(security?.sudo_users_count ?? 'n/a')} />
@@ -309,6 +337,7 @@ export function SystemPage() {
               <h2 className="mb-3 text-xs font-medium uppercase tracking-wide text-zinc-500">
                 Intentos SSH (24h)
               </h2>
+              <SourceBadge source={sshAttempts?.source} reason={sshAttempts?.source_reason} />
               <SshAttemptsChart labels={sshAttempts?.labels ?? []} values={sshAttempts?.values ?? []} />
             </section>
           </div>
@@ -468,5 +497,41 @@ function logBgClass(level: 'ok' | 'warn' | 'err' | 'info'): string {
   if (level === 'warn') return 'bg-amber-950/20'
   if (level === 'err') return 'bg-red-950/20'
   return 'bg-zinc-900'
+}
+
+function SourceBadge({ source, reason }: { source?: 'real' | 'fallback'; reason?: string }) {
+  if (!source) return null
+  const [openReason, setOpenReason] = useState(false)
+  const canShowReason = source === 'fallback' && Boolean(reason)
+
+  return (
+    <div className="mb-2 flex items-center gap-2">
+      <span
+        className={`inline-flex rounded px-2 py-0.5 text-[10px] uppercase tracking-wide ${
+          source === 'real' ? 'bg-emerald-950/40 text-emerald-300' : 'bg-amber-950/40 text-amber-300'
+        }`}
+      >
+        source: {source}
+      </span>
+      {canShowReason ? (
+        <>
+          <button
+            type="button"
+            onClick={() => setOpenReason((prev) => !prev)}
+            className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-amber-800/80 bg-amber-950/30 text-[10px] font-semibold text-amber-300 hover:bg-amber-900/40"
+            aria-label="Mostrar detalle de fallback"
+            title={openReason ? 'Ocultar detalle' : 'Mostrar detalle'}
+          >
+            i
+          </button>
+          {openReason ? (
+            <p className="max-w-[460px] rounded border border-amber-900/60 bg-amber-950/20 px-2 py-1 text-[10px] text-amber-200">
+              {reason}
+            </p>
+          ) : null}
+        </>
+      ) : null}
+    </div>
+  )
 }
 

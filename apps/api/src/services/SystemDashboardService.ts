@@ -13,6 +13,7 @@ type MaintenanceRun = {
 }
 
 type LogItem = { time: string; level: 'ok' | 'warn' | 'err' | 'info'; message: string }
+type DataSource = 'real' | 'fallback'
 
 const RUNS_DIR = process.env.SENTINEL_RUNS_DIR ?? '/var/log/sentinel/runs'
 const LOG_FILE = process.env.SENTINEL_MAINTENANCE_LOG ?? '/var/log/mantenimiento.log'
@@ -45,6 +46,20 @@ function nowRunId(): string {
   return `run_${new Date().toISOString().replace(/[-:TZ.]/g, '').slice(0, 14)}`
 }
 
+const maintenanceState: {
+  running: boolean
+  currentRunId: string | null
+  lastStartedAt: string | null
+  lastFinishedAt: string | null
+  lastExitCode: number | null
+} = {
+  running: false,
+  currentRunId: null,
+  lastStartedAt: null,
+  lastFinishedAt: null,
+  lastExitCode: null,
+}
+
 function runShell(
   command: string,
   args: string[],
@@ -74,7 +89,11 @@ function runShell(
   })
 }
 
-export async function readMaintenanceRuns(): Promise<MaintenanceRun[]> {
+export async function readMaintenanceRuns(): Promise<{
+  runs: MaintenanceRun[]
+  source: DataSource
+  source_reason?: string
+}> {
   try {
     const files = await readdir(RUNS_DIR)
     const jsonFiles = files.filter((f) => f.endsWith('.json'))
@@ -95,19 +114,23 @@ export async function readMaintenanceRuns(): Promise<MaintenanceRun[]> {
       })
     }
     runs.sort((a, b) => (a.started_at < b.started_at ? 1 : -1))
-    return runs
-  } catch {
-    return [
-      {
-        id: 'run_20260507_020000',
-        started_at: '2026-05-07T02:00:00Z',
-        duration_seconds: 222,
-        tasks_total: 5,
-        tasks_ok: 5,
-        status: 'ok',
-        backup_file: 'backup_20260507_020000.tar.gz',
-      },
-    ]
+    return { runs, source: 'real' }
+  } catch (error) {
+    return {
+      runs: [
+        {
+          id: 'run_20260507_020000',
+          started_at: '2026-05-07T02:00:00Z',
+          duration_seconds: 222,
+          tasks_total: 5,
+          tasks_ok: 5,
+          status: 'ok',
+          backup_file: 'backup_20260507_020000.tar.gz',
+        },
+      ],
+      source: 'fallback',
+      source_reason: error instanceof Error ? error.message : `Cannot read ${RUNS_DIR}`,
+    }
   }
 }
 
@@ -116,23 +139,61 @@ export async function triggerMaintenanceRun(): Promise<{
   message: string
   started_at: string
 }> {
+  if (!MAINTENANCE_SCRIPT) {
+    throw new Error('SENTINEL_MAINTENANCE_SCRIPT no está configurado en el backend')
+  }
+
   const runId = nowRunId()
   const startedAt = new Date().toISOString()
-  if (MAINTENANCE_SCRIPT) {
-    try {
-      const child = spawn('bash', [MAINTENANCE_SCRIPT], {
-        detached: true,
-        stdio: 'ignore',
-      })
-      child.unref()
-    } catch {
-      // fallback below
-    }
+  if (maintenanceState.running) {
+    throw new Error('Ya hay una ejecución de mantenimiento en curso')
   }
+
+  maintenanceState.running = true
+  maintenanceState.currentRunId = runId
+  maintenanceState.lastStartedAt = startedAt
+  maintenanceState.lastExitCode = null
+
+  const child = spawn('bash', [MAINTENANCE_SCRIPT], {
+    detached: false,
+    stdio: 'ignore',
+  })
+  child.on('close', (code) => {
+    maintenanceState.running = false
+    maintenanceState.lastFinishedAt = new Date().toISOString()
+    maintenanceState.lastExitCode = code ?? 1
+    maintenanceState.currentRunId = null
+  })
+  child.on('error', () => {
+    maintenanceState.running = false
+    maintenanceState.lastFinishedAt = new Date().toISOString()
+    maintenanceState.lastExitCode = 1
+    maintenanceState.currentRunId = null
+  })
+
   return { run_id: runId, message: 'Mantenimiento iniciado', started_at: startedAt }
 }
 
-export async function readSystemLogs(level: 'all' | 'err' | 'warn' | 'ok' | 'info', limit: number): Promise<LogItem[]> {
+export function readMaintenanceStatus(): {
+  running: boolean
+  current_run_id: string | null
+  last_started_at: string | null
+  last_finished_at: string | null
+  last_exit_code: number | null
+} {
+  return {
+    running: maintenanceState.running,
+    current_run_id: maintenanceState.currentRunId,
+    last_started_at: maintenanceState.lastStartedAt,
+    last_finished_at: maintenanceState.lastFinishedAt,
+    last_exit_code: maintenanceState.lastExitCode,
+  }
+}
+
+export async function readSystemLogs(
+  level: 'all' | 'err' | 'warn' | 'ok' | 'info',
+  limit: number,
+): Promise<{ logs: LogItem[]; source: DataSource }> {
   const fallback: LogItem[] = [
     { time: '02:03:41', level: 'ok', message: 'Mantenimiento completado sin errores críticos' },
     { time: '02:01:10', level: 'warn', message: 'Redis en alto uso de memoria' },
@@ -157,14 +218,23 @@ export async function readSystemLogs(level: 'all' | 'err' | 'warn' | 'ok' | 'inf
       })
       .reverse()
     const filtered = level === 'all' ? parsed : parsed.filter((log) => log.level === level)
-    return filtered.slice(0, limit)
-  } catch {
+    return { logs: filtered.slice(0, limit), source: 'real' }
+  } catch (error) {
     const filtered = level === 'all' ? fallback : fallback.filter((log) => log.level === level)
-    return filtered.slice(0, limit)
+    return {
+      logs: filtered.slice(0, limit),
+      source: 'fallback',
+      source_reason: error instanceof Error ? error.message : `Cannot read ${LOG_FILE}`,
+    }
   }
 }
 
-export async function readCpuHistory12h(): Promise<{ labels: string[]; values: number[] }> {
+export async function readCpuHistory12h(): Promise<{
+  labels: string[]
+  values: number[]
+  source: DataSource
+  source_reason?: string
+}> {
   try {
     const raw = await readFile(CPU_HISTORY_FILE, 'utf8')
     const entries = raw
@@ -190,8 +260,8 @@ export async function readCpuHistory12h(): Promise<{ labels: string[]; values: n
       labels.push(`${hour}:00`)
       values.push(Math.round(avg))
     }
-    return { labels, values }
-  } catch {
+    return { labels, values, source: 'real' }
+  } catch (error) {
     const now = new Date()
     const labels: string[] = []
     const values: number[] = []
@@ -200,17 +270,26 @@ export async function readCpuHistory12h(): Promise<{ labels: string[]; values: n
       labels.push(`${d.getHours()}:00`)
       values.push(Math.max(10, Math.min(95, 15 + Math.round(Math.sin(i) * 18) + i)))
     }
-    return { labels, values }
+    return {
+      labels,
+      values,
+      source: 'fallback',
+      source_reason: error instanceof Error ? error.message : `Cannot read ${CPU_HISTORY_FILE}`,
+    }
   }
 }
 
-export async function readDiskDirs(): Promise<{ dirs: Array<{ path: string; size_gb: number; percent: number }> }> {
+export async function readDiskDirs(): Promise<{
+  dirs: Array<{ path: string; size_gb: number; percent: number }>
+  source: DataSource
+  source_reason?: string
+}> {
   try {
     const raw = await readFile(DISK_DIRS_CACHE, 'utf8')
     const data = safeJsonParse<Array<{ path: string; size_gb: number; percent: number }>>(raw)
     if (!data || !Array.isArray(data) || data.length === 0) throw new Error('empty')
-    return { dirs: data.slice(0, 5) }
-  } catch {
+    return { dirs: data.slice(0, 5), source: 'real' }
+  } catch (error) {
     return {
       dirs: [
         { path: '/var', size_gb: 38.2, percent: 39 },
@@ -219,12 +298,16 @@ export async function readDiskDirs(): Promise<{ dirs: Array<{ path: string; size
         { path: '/opt', size_gb: 6.3, percent: 6 },
         { path: '/tmp', size_gb: 1.2, percent: 1 },
       ],
+      source: 'fallback',
+      source_reason: error instanceof Error ? error.message : `Cannot read ${DISK_DIRS_CACHE}`,
     }
   }
 }
 
 export async function readSystemServices(): Promise<{
   services: Array<{ name: string; status: string; level: 'ok' | 'warn' | 'err'; note?: string }>
+  source: DataSource
+  source_reason?: string
 }> {
   const services = await Promise.all(
     MONITORED_SERVICES.map(async (name) => {
@@ -234,7 +317,10 @@ export async function readSystemServices(): Promise<{
       return { name, status, level }
     }),
   )
-  return { services }
+  const hasRealSignal = services.some((s) => s.status === 'active')
+  return hasRealSignal
+    ? { services, source: 'real' }
+    : { services, source: 'fallback', source_reason: 'systemctl is unavailable or all services are inactive' }
 }
 
 export async function readSystemNetwork(): Promise<{
@@ -244,6 +330,8 @@ export async function readSystemNetwork(): Promise<{
   open_ports: number[]
   rx_today_gb: number
   tx_today_gb: number
+  source: DataSource
+  source_reason?: string
 }> {
   const ipRes = await runShell('bash', ['-lc', 'curl -s https://api.ipify.org || true'])
   const dnsRes = await runShell(
@@ -271,6 +359,9 @@ export async function readSystemNetwork(): Promise<{
       { rx: 0, tx: 0 },
     )
 
+  const source: DataSource =
+    ipRes.code === 0 || dnsRes.code === 0 || connRes.code === 0 || portsRes.code === 0 ? 'real' : 'fallback'
+
   return {
     public_ip: ipRes.stdout.trim() || 'n/a',
     dns_latency_ms: Number.parseInt(dnsRes.stdout.trim(), 10) || 0,
@@ -281,6 +372,8 @@ export async function readSystemNetwork(): Promise<{
       .filter((n) => Number.isFinite(n)),
     rx_today_gb: Number((rxTx.rx / 1024 ** 3).toFixed(2)),
     tx_today_gb: Number((rxTx.tx / 1024 ** 3).toFixed(2)),
+    source,
+    source_reason: source === 'fallback' ? 'Network shell probes did not return usable data' : undefined,
   }
 }
 
@@ -298,6 +391,8 @@ export async function readSecurityStatus(): Promise<{
     wear_percent: number | null
     temperature_c: number | null
   }>
+  source: DataSource
+  source_reason?: string
 }> {
   const secUpdates = await runShell(
     'bash',
@@ -323,6 +418,11 @@ export async function readSecurityStatus(): Promise<{
   )
   const ufw = await runShell('bash', ['-lc', "ufw status 2>/dev/null | grep -i 'Status: active' || true"])
 
+  const source: DataSource =
+    secUpdates.code === 0 || f2b.code === 0 || sudoUsers.code === 0 || suid.code === 0 || ufw.code === 0
+      ? 'real'
+      : 'fallback'
+
   return {
     security_updates_pending: Number.parseInt(secUpdates.stdout.trim(), 10) || 0,
     fail2ban_blocked_ips: Number.parseInt(f2b.stdout.trim(), 10) || 0,
@@ -345,10 +445,17 @@ export async function readSecurityStatus(): Promise<{
         temperature_c: null,
       },
     ],
+    source,
+    source_reason: source === 'fallback' ? 'Security commands unavailable on this host' : undefined,
   }
 }
 
-export async function readSshAttempts24h(): Promise<{ labels: string[]; values: number[] }> {
+export async function readSshAttempts24h(): Promise<{
+  labels: string[]
+  values: number[]
+  source: DataSource
+  source_reason?: string
+}> {
   const labels = Array.from({ length: 24 }, (_, i) => `${i.toString().padStart(2, '0')}:00`)
   const attempts = new Array<number>(24).fill(0)
   const logRes = await runShell(
@@ -359,6 +466,12 @@ export async function readSshAttempts24h(): Promise<{ labels: string[]; values: 
     const hour = Number.parseInt(line.trim(), 10)
     if (Number.isFinite(hour) && hour >= 0 && hour < 24) attempts[hour] += 1
   }
-  return { labels, values: attempts }
+  const source: DataSource = logRes.code === 0 ? 'real' : 'fallback'
+  return {
+    labels,
+    values: attempts,
+    source,
+    source_reason: source === 'fallback' ? '/var/log/auth.log unreadable or missing' : undefined,
+  }
 }
 

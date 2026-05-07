@@ -4,6 +4,7 @@ import {
   readCpuHistory12h,
   readDiskDirs,
   readMaintenanceRuns,
+  readMaintenanceStatus,
   readSecurityStatus,
   readSshAttempts24h,
   readSystemNetwork,
@@ -57,18 +58,27 @@ export async function registerSystemRoutes(app: FastifyInstance): Promise<void> 
 
   app.get('/system/disk-dirs', async () => readDiskDirs())
 
-  app.get('/maintenance/runs', async () => ({ runs: await readMaintenanceRuns() }))
+  app.get('/maintenance/runs', async () => readMaintenanceRuns())
 
-  app.post('/maintenance/run', async (_request, reply) =>
-    reply.code(202).send(await triggerMaintenanceRun()),
-  )
+  app.get('/maintenance/status', async () => readMaintenanceStatus())
+
+  app.post('/maintenance/run', async (_request, reply) => {
+    try {
+      return await reply.code(202).send(await triggerMaintenanceRun())
+    } catch (error) {
+      return await reply.code(400).send({
+        error: 'Maintenance run rejected',
+        message: error instanceof Error ? error.message : String(error),
+      })
+    }
+  })
 
   app.get<{ Querystring: { level?: 'all' | 'err' | 'warn' | 'ok' | 'info'; limit?: string } }>(
     '/logs',
     async (request) => {
       const level = request.query.level ?? 'all'
       const limit = Math.max(1, Math.min(500, Number.parseInt(request.query.limit ?? '100', 10) || 100))
-      return { logs: await readSystemLogs(level, limit) }
+      return await readSystemLogs(level, limit)
     },
   )
 
