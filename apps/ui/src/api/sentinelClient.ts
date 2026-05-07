@@ -400,7 +400,7 @@ export async function runMaintenanceNow(): Promise<{
 }> {
   const res = await fetch(`${API_BASE}/api/maintenance/run`, {
     method: 'POST',
-    headers: authHeadersJson(),
+    headers: authHeaders(),
   })
   if (!res.ok) {
     const err = (await res.json().catch(() => ({}))) as { error?: string; message?: string }
