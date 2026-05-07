@@ -10,20 +10,19 @@ services:
       - sentinel-projects:/opt/sentinel/projects
       - /var/run/docker.sock:/var/run/docker.sock
       # Host visibility for System dashboard real probes/logs.
-      - /var/log:/var/log:ro
-      - /var/cache:/var/cache:ro
+      - /var/log:/var/log
+      - /var/cache:/var/cache
       - /etc:/etc:ro
       - /run:/run:ro
+    group_add:
+      - adm
     environment:
       SENTINEL_API_KEY: ${SENTINEL_API_KEY:-cambia_esto}
       SENTINEL_PORT: "3500"
       SENTINEL_DATA_DIR: /app/data
       SENTINEL_PROJECTS_DIR: /opt/sentinel/projects
-      # Enable host namespace execution for system probes.
       SENTINEL_USE_HOST_NSENTER: ${SENTINEL_USE_HOST_NSENTER:-true}
-      # By default run the bundled maintenance script inside API container.
       SENTINEL_MAINTENANCE_SCRIPT: ${SENTINEL_MAINTENANCE_SCRIPT:-/app/apps/api/scripts/maintenance.sh}
-      # Optional: set true to run maintenance script in host namespace via nsenter.
       SENTINEL_RUN_MAINTENANCE_IN_HOST: ${SENTINEL_RUN_MAINTENANCE_IN_HOST:-false}
     privileged: true
     restart: unless-stopped
@@ -33,7 +32,6 @@ services:
       context: .
       dockerfile: apps/ui/Dockerfile
       args:
-        # Vacío: el navegador usa el mismo origen y nginx reenvía /api → sentinel-api
         VITE_API_URL: ${VITE_API_URL:-}
         VITE_API_KEY: ${SENTINEL_API_KEY:-cambia_esto}
     ports:
