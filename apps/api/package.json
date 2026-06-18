@@ -9,7 +9,7 @@
     "lint": "echo \"no linter configured\""
   },
   "dependencies": {
-    "@fastify/cors": "^10.0.1",
+    "@fastify/cors": "^11.2.0",
     "@octokit/rest": "^22.0.1",
     "@sentinel/shared-types": "workspace:*",
     "fastify": "^5.2.0",
